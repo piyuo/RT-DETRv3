@@ -6,6 +6,7 @@
 # pip install onnx==1.16.2 onnxruntime==1.22.1 polygraphy --force-reinstall
 # pip install numpy==1.26.4 --only-binary=:all: --force-reinstall
 # pip install numba==0.56.4
+# pip install onnx==1.16.2 onnxconverter-common
 
 #!/bin/bash
 python3 tools/export_model.py \
@@ -29,6 +30,11 @@ paddle2onnx \
 python3 tools/fix_model.py
 # replace the original model with fixed model
 mv -f output_inference/rtdetrv3_r18vd_6x_fixed.onnx output_inference/rtdetrv3_r18vd_6x.onnx
+
+#python3 tools/optimize_model.py
+#mv -f output_inference/rtdetrv3_r18vd_6x_fp16.onnx output_inference/rtdetrv3_r18vd_6x.onnx
+
+
 python3 tools/load_model.py
 
 
