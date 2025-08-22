@@ -17,5 +17,7 @@ pip install paddlepaddle
 
 # Now, install PaddleSlim and PaddleDetection
 pip install opencv-python==4.6.0.66
+pip install numpy==1.26.4
 pip install paddleslim
 pip install paddledet
+pip install imgaug

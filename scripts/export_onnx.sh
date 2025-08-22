@@ -11,8 +11,7 @@
 #!/bin/bash
 python3 tools/export_model.py \
     -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
-    -o weights=weights/rtdetrv3_r18vd_6x.pdparams \
-    export_onnx=True
+    -o weights=weights/rtdetrv3_r18vd_6x.pdparams
 
 # compile paddle2onnx on macOS x64 , cause paddle2onnx only support arm64 for now, and re-compile if libprotobuf version is changed.
 # it seems RT-DETRv3 only support opset_version 16, so we set it to 16 here.
