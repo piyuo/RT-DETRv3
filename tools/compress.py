@@ -41,24 +41,27 @@ def main():
     # 2. Load the evaluation reader configuration
     reader_cfg = yaml.safe_load(open(reader_config_file))['EvalReader']
 
-    # 3. Prepare the dataset and data loader
-    dataset_root = os.path.join("dataset", "coco")
-    image_dir = reader_cfg['dataset']['image_dir']
-    anno_path = reader_cfg['dataset']['anno_path']
+    # 3. Define a function to create the dataloader.
+    # AutoCompression expects a callable function, not an already-instantiated object.
+    def create_dataloader():
+        # Prepare the dataset
+        dataset_root = os.path.join("dataset", "coco")
+        image_dir = reader_cfg['dataset']['image_dir']
+        anno_path = reader_cfg['dataset']['anno_path']
 
-    calib_dataset = COCODataSet(
-        dataset_dir=dataset_root,
-        image_dir=image_dir,
-        anno_path=anno_path
-    )
+        calib_dataset = COCODataSet(
+            dataset_dir=dataset_root,
+            image_dir=image_dir,
+            anno_path=anno_path
+        )
 
-    # EvalReader will be the dataloader passed to AutoCompression
-    train_dataloader = EvalReader(
-        sample_transforms=reader_cfg['sample_transforms'],
-        batch_size=reader_cfg['batch_size'],
-        shuffle=reader_cfg['shuffle'],
-        drop_last=reader_cfg['drop_last']
-    )(dataset=calib_dataset, worker_num=0, return_list=True)
+        # Return the DataLoader object
+        return EvalReader(
+            sample_transforms=reader_cfg['sample_transforms'],
+            batch_size=reader_cfg['batch_size'],
+            shuffle=reader_cfg['shuffle'],
+            drop_last=reader_cfg['drop_last']
+        )(dataset=calib_dataset, worker_num=0, return_list=True)
 
     # 4. Define the evaluation callback
     # We load the main configuration directly from the hardcoded path.
@@ -74,7 +77,10 @@ def main():
 
         mock_flags = MockFLAGS(config_file)
 
-        return eval_function(program, place, exe, scope, train_dataloader, mock_flags, cfg)
+        # We now create the dataloader inside the callback as well
+        dataloader = create_dataloader()
+
+        return eval_function(program, place, exe, scope, dataloader, mock_flags, cfg)
 
     # 5. Run AutoCompression
     ac = AutoCompression(
@@ -83,7 +89,7 @@ def main():
         params_filename=params_filename,
         save_dir="output/rtdetrv3_r18vd_6x_quant",
         config=all_config,
-        train_dataloader=train_dataloader,
+        train_dataloader=create_dataloader, # Pass the function, not the object
         eval_callback=eval_callback
     )
     ac.compress()
