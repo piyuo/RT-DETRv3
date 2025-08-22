@@ -14,6 +14,7 @@ from paddleslim.auto_compression import AutoCompression
 # Import the reader and dataset from PaddleDetection
 from ppdet.data.reader import EvalReader
 from ppdet.data.source.coco import COCODataSet
+from ppdet.core.workspace import load_config # Make sure this import is correct
 
 # Import the new evaluation function from eval.py
 from tools.eval_act import eval_function
@@ -37,8 +38,8 @@ def main():
 
     # 3. Prepare the dataset and data loader
     dataset_root = os.path.join("dataset", "coco")
-    image_dir =  reader_cfg['dataset']['image_dir']
-    anno_path =  reader_cfg['dataset']['anno_path']
+    image_dir = reader_cfg['dataset']['image_dir']
+    anno_path = reader_cfg['dataset']['anno_path']
 
     calib_dataset = COCODataSet(
         dataset_dir=dataset_root,
@@ -52,25 +53,27 @@ def main():
         batch_size=reader_cfg['batch_size'],
         shuffle=reader_cfg['shuffle'],
         drop_last=reader_cfg['drop_last']
-    )(dataset=calib_dataset, worker_num=0)
+    )(dataset=calib_dataset, worker_num=0, return_list=True)
 
     # 4. Define the evaluation callback
-    # We pass the eval_function directly to AutoCompression, along with
-    # the required arguments from the main script.
-
-    # We need to load the main configuration for the eval function
-    FLAGS = paddle.static.ArgumentParser().parse_args()
-    FLAGS.config = config_file
-    cfg = load_config(FLAGS.config)
-
-    # Pass the other flags that eval.py might need
-    FLAGS.slice_infer = False # Example
+    # We load the main configuration directly from the hardcoded path.
+    # The previous code for ArgumentParser was incorrect and unnecessary.
+    cfg = load_config(config_file)
 
     # The wrapper for the eval_function
     def eval_callback(program, place, exe, scope):
         # The dataloader is already prepared and passed to AutoCompression.
         # We just need to call our function with the provided arguments.
-        return eval_function(program, place, exe, scope, train_dataloader, FLAGS, cfg)
+        # We also need to pass a mock FLAGS object or fix eval_function to not need it
+        # For now, let's create a simple object to hold config
+        class MockFLAGS:
+            def __init__(self, config):
+                self.config = config
+                self.slice_infer = False
+
+        mock_flags = MockFLAGS(config_file)
+
+        return eval_function(program, place, exe, scope, train_dataloader, mock_flags, cfg)
 
     # 5. Run AutoCompression
     ac = AutoCompression(
