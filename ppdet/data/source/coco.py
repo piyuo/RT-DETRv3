@@ -1,15 +1,15 @@
-# Copyright (c) 2019 PaddlePaddle Authors. All Rights Reserved. 
-#   
-# Licensed under the Apache License, Version 2.0 (the "License");   
-# you may not use this file except in compliance with the License.  
-# You may obtain a copy of the License at   
-#   
-#     http://www.apache.org/licenses/LICENSE-2.0    
-#   
-# Unless required by applicable law or agreed to in writing, software   
-# distributed under the License is distributed on an "AS IS" BASIS, 
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  
-# See the License for the specific language governing permissions and   
+# Copyright (c) 2019 PaddlePaddle Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
 # limitations under the License.
 
 import os
@@ -44,11 +44,11 @@ class COCODataSet(DetDataset):
         anno_path (str): coco annotation file path.
         data_fields (list): key name of data dictionary, at least have 'image'.
         sample_num (int): number of samples to load, -1 means all.
-        load_crowd (bool): whether to load crowded ground-truth. 
+        load_crowd (bool): whether to load crowded ground-truth.
             False as default
         allow_empty (bool): whether to load empty entry. False as default
-        empty_ratio (float): the ratio of empty record number to total 
-            record's, if empty_ratio is out of [0. ,1.), do not sample the 
+        empty_ratio (float): the ratio of empty record number to total
+            record's, if empty_ratio is out of [0. ,1.), do not sample the
             records and use all the empty entries. 1. as default
         repeat (int): repeat times for dataset, use in benchmark.
     """
@@ -62,7 +62,7 @@ class COCODataSet(DetDataset):
                  load_crowd=False,
                  allow_empty=False,
                  empty_ratio=1.,
-                 repeat=1):
+                 repeat=1,with_mask=False):
         super(COCODataSet, self).__init__(
             dataset_dir,
             image_dir,
@@ -75,6 +75,7 @@ class COCODataSet(DetDataset):
         self.load_crowd = load_crowd
         self.allow_empty = allow_empty
         self.empty_ratio = empty_ratio
+        self.with_mask = False
 
     def _sample_empty(self, records, num):
         # if empty_ratio is out of [0. ,1.), do not sample the records
@@ -190,21 +191,24 @@ class COCODataSet(DetDataset):
                     gt_class[i][0] = self.catid2clsid[catid]
                     gt_bbox[i, :] = box['clean_bbox']
                     is_crowd[i][0] = box['iscrowd']
-                    # check RLE format 
-                    if 'segmentation' in box and box['iscrowd'] == 1:
-                        gt_poly[i] = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]
-                    elif 'segmentation' in box and box['segmentation']:
-                        if not np.array(
-                                box['segmentation'],
-                                dtype=object).size > 0 and not self.allow_empty:
-                            bboxes.pop(i)
-                            gt_poly.pop(i)
-                            np.delete(is_crowd, i)
-                            np.delete(gt_class, i)
-                            np.delete(gt_bbox, i)
-                        else:
-                            gt_poly[i] = box['segmentation']
-                        has_segmentation = True
+                    # check RLE format
+                    if self.with_mask:
+                        if 'segmentation' in box and box['iscrowd'] == 1:
+                            gt_poly[i] = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]
+                        elif 'segmentation' in box and box['segmentation']:
+                            if not np.array(
+                                    box['segmentation'],
+                                    dtype=object).size > 0 and not self.allow_empty:
+                                bboxes.pop(i)
+                                gt_poly.pop(i)
+                                np.delete(is_crowd, i)
+                                np.delete(gt_class, i)
+                                np.delete(gt_bbox, i)
+                            else:
+                                gt_poly[i] = box['segmentation']
+                            has_segmentation = True
+                    else:
+                        gt_poly[i] = None
 
                     if 'track_id' in box:
                         gt_track_id[i][0] = box['track_id']
@@ -498,21 +502,23 @@ class SemiCOCODataSet(COCODataSet):
                     gt_class[i][0] = self.catid2clsid[catid]
                     gt_bbox[i, :] = box['clean_bbox']
                     is_crowd[i][0] = box['iscrowd']
-                    # check RLE format 
-                    if 'segmentation' in box and box['iscrowd'] == 1:
-                        gt_poly[i] = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]
-                    elif 'segmentation' in box and box['segmentation']:
-                        if not np.array(box['segmentation']
-                                        ).size > 0 and not self.allow_empty:
-                            bboxes.pop(i)
-                            gt_poly.pop(i)
-                            np.delete(is_crowd, i)
-                            np.delete(gt_class, i)
-                            np.delete(gt_bbox, i)
-                        else:
-                            gt_poly[i] = box['segmentation']
-                        has_segmentation = True
-
+                    # check RLE format
+                    if self.with_mask:
+                        if 'segmentation' in box and box['iscrowd'] == 1:
+                            gt_poly[i] = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]
+                        elif 'segmentation' in box and box['segmentation']:
+                            if not np.array(box['segmentation']
+                                            ).size > 0 and not self.allow_empty:
+                                bboxes.pop(i)
+                                gt_poly.pop(i)
+                                np.delete(is_crowd, i)
+                                np.delete(gt_class, i)
+                                np.delete(gt_bbox, i)
+                            else:
+                                gt_poly[i] = box['segmentation']
+                            has_segmentation = True
+                    else:
+                        gt_poly[i] = None
                 if has_segmentation and not any(
                         gt_poly) and not self.allow_empty:
                     continue

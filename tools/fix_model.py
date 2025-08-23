@@ -2,8 +2,8 @@
 import onnx
 from onnx import helper, TensorProto, shape_inference
 
-SRC = "output_inference/rtdetrv3_r18vd_6x.onnx"
-DST = "output_inference/rtdetrv3_r18vd_6x_fixed.onnx"
+SRC = "output/rtdetrv3_r18vd_6x.onnx"
+DST = "output/rtdetrv3_r18vd_6x_fixed.onnx"
 
 def collect_shapes(model):
     shapes = {}

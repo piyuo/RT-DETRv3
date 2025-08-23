@@ -1049,7 +1049,7 @@ class Trainer(object):
             self.mode = mode
             self.cfg.pop('save_prediction_only')
             if save_prediction_only is not None:
-                self.cfg['save_prediction_only'] = save_prediction_only            
+                self.cfg['save_prediction_only'] = save_prediction_only
 
             self.cfg.pop('output_eval')
             if output_eval is not None:
@@ -1270,6 +1270,7 @@ class Trainer(object):
         return static_model, pruned_input_spec
 
     def export(self, output_dir='output_inference', for_fd=False):
+
         if hasattr(self.model, 'aux_neck'):
             self.model.__delattr__('aux_neck')
         if hasattr(self.model, 'aux_head'):
