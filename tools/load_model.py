@@ -1,7 +1,7 @@
 # tools/load_model.py
 import onnx
 
-onnx_path = "output_inference/rtdetrv3_r18vd_6x.onnx"
+onnx_path = "output/rtdetrv3_r18vd_6x.onnx"
 
 print(f"Loading: {onnx_path}")
 model = onnx.load(onnx_path)
