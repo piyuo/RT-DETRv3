@@ -177,8 +177,15 @@ dataset/coco/annotations/instances_val2017.json
 dataset/penn_fudan_ped/
 dataset/calibration_640/
 
-# paddle env
+# python env
 paddle_env/
+onnx_env/
 
 # act.sh
 output/
+
+# microsoft olive
+olive_env/
+olive_output/
+.olive-cache/
+calib/
