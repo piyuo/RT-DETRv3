@@ -2,22 +2,15 @@
 # This script initializes the environment for the project
 #!/bin/bash
 
-# PaddlePaddle need Python 3.11 now
-brew install python@3.11
 
 # Create an environment with Python 3.11
-python3.11 -m venv paddle_env
+python3 -m venv onnx_env
 
 # Activate the environment
-source paddle_env/bin/activate
+source onnx_env/bin/activate
 
 
-# Install the compatible PaddlePaddle version
-pip install paddlepaddle
-
-# Now, install PaddleSlim and PaddleDetection
-pip install opencv-python==4.6.0.66
-pip install numpy==1.26.4
-#pip install paddleslim
-#pip install paddledet
-#pip install imgaug
+# Install onnxruntime-tools if not already installed
+pip install numpy==1.26.4 --upgrade
+pip install --upgrade olive-ai onnxruntime onnx onnxruntime-tools pillow
+pip install opencv-python==4.9.0.80
