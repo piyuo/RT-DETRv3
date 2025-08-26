@@ -5,8 +5,12 @@ from PIL import Image
 from torch.utils.data import Dataset
 import cv2
 from pycocotools.coco import COCO
+import logging
 
 from olive.data.registry import Registry
+
+# Configure logging for progress tracking
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 # -------------------------------
@@ -49,11 +53,16 @@ def cxcywh_to_xyxy(boxes):
 # -------------------------------
 class CocoDetection(Dataset):
     def __init__(self, data_dir, annotation_file):
+        logging.info(f"Loading COCO dataset from {data_dir} with annotations {annotation_file}")
         self.coco = COCO(annotation_file)
         self.ids = list(sorted(self.coco.imgs.keys()))
         self.data_dir = data_dir
+        logging.info(f"Loaded {len(self.ids)} images for calibration/evaluation")
 
     def __getitem__(self, idx):
+        if idx % 100 == 0:  # Log progress every 100 samples
+            logging.info(f"Processing sample {idx}/{len(self.ids)} ({idx/len(self.ids)*100:.1f}%)")
+
         img_id = self.ids[idx]
         ann_ids = self.coco.getAnnIds(imgIds=img_id)
         anns = self.coco.loadAnns(ann_ids)
@@ -100,6 +109,7 @@ class CocoDetection(Dataset):
 
 @Registry.register_dataset()
 def dataset_load(data_dir, annotation_file, **kwargs):
+    logging.info("Creating COCO dataset for Olive optimization")
     return CocoDetection(data_dir, annotation_file)
 
 
@@ -129,6 +139,8 @@ def decode_outputs(outputs, conf_threshold=0.5):
 @Registry.register_post_process()
 def dataset_post_process(outputs):
     """Turn model raw outputs into usable predictions."""
+    logging.debug("Post-processing model outputs for quantization")
+
     # Based on your model inspection:
     # - fetch_name_0: [batch, 6] - detections in format [class_id, conf, x1, y1, x2, y2]
     # - fetch_name_1: [batch] - number of detections
@@ -141,6 +153,7 @@ def dataset_post_process(outputs):
 
     # Use the same decoding logic as your working script
     detections = decode_outputs([detections_output], conf_threshold=0.1)  # Low threshold for quantization
+    logging.debug(f"Decoded {len(detections)} detections")
 
     if len(detections) == 0:
         return {
