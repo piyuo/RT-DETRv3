@@ -153,7 +153,7 @@ def verify_model(onnx_model, image_path, output_path, conf_threshold=0.5):
 if __name__ == "__main__":
     verify_model(
         #onnx_model="output/rtdetrv3_r18vd_6x_optimized.onnx",
-        onnx_model="output/olive/model/rtdetrv3_r18vd_6x.onnx",
+        onnx_model="output/olive/model.onnx",
         image_path="demo/demo.jpg",
         output_path="output/demo.jpg",
         conf_threshold=0.5
