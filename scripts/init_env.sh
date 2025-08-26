@@ -14,3 +14,7 @@ source onnx_env/bin/activate
 pip install numpy==1.26.4 --upgrade
 pip install --upgrade olive-ai onnxruntime onnx onnxruntime-tools pillow
 pip install opencv-python==4.9.0.80
+
+# for rtdetr.py
+pip install torchvision
+pip install pycocotools

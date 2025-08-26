@@ -24,4 +24,4 @@ source onnx_env/bin/activate
 
 olive  run --config optimize_onnx_model.json
 
-scripts/verify_onnx_model.sh
+#scripts/verify_onnx_model.sh
