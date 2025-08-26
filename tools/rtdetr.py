@@ -3,25 +3,39 @@ import numpy as np
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
-from torchvision import transforms
+import cv2
 from pycocotools.coco import COCO
 
 from olive.data.registry import Registry
 
 
 # -------------------------------
-# Preprocessing
+# Preprocessing (matching your working script)
 # -------------------------------
-transform = transforms.Compose([
-    transforms.Resize((640, 640)),
-    transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406],
-                         [0.229, 0.224, 0.225]),
-])
+def preprocess_image_pil(pil_image, target_size=(640, 640)):
+    """Preprocess PIL image to match RT-DETRv3 format - return unbatched tensors."""
+    # Convert PIL to OpenCV format
+    img_cv = np.array(pil_image)
+    if len(img_cv.shape) == 3 and img_cv.shape[2] == 3:
+        img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2BGR)
+
+    # Get original shape - return as 1D array [height, width]
+    orig_h, orig_w = img_cv.shape[:2]
+    im_shape = np.array([orig_h, orig_w], dtype=np.float32)
+    scale_factor = np.array([1.0, 1.0], dtype=np.float32)
+
+    # Resize and normalize - return as 3D array [channels, height, width]
+    resized = cv2.resize(img_cv, target_size)
+    resized = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+    resized = resized.astype(np.float32).transpose(2, 0, 1) / 255.0
+
+    return resized, im_shape, scale_factor
 
 
 def cxcywh_to_xyxy(boxes):
     """Convert (cx,cy,w,h) -> (x1,y1,x2,y2)."""
+    if isinstance(boxes, np.ndarray):
+        boxes = torch.from_numpy(boxes)
     cx, cy, w, h = boxes.unbind(-1)
     x1 = cx - 0.5 * w
     y1 = cy - 0.5 * h
@@ -44,15 +58,18 @@ class CocoDetection(Dataset):
         ann_ids = self.coco.getAnnIds(imgIds=img_id)
         anns = self.coco.loadAnns(ann_ids)
 
-        # load image
+        # Load image
         path = self.coco.loadImgs(img_id)[0]['file_name']
         img = Image.open(os.path.join(self.data_dir, path)).convert("RGB")
-        img_t = transform(img)
 
-        # load boxes/labels in normalized cxcywh format
+        # Preprocess using the same method as your working script
+        image_tensor, im_shape_tensor, scale_factor_tensor = preprocess_image_pil(img)
+
+        # Prepare ground truth boxes and labels (for evaluation)
         boxes, labels = [], []
         for ann in anns:
             x, y, w, h = ann["bbox"]
+            # Convert to normalized cxcywh format
             cx = (x + w / 2) / img.width
             cy = (y + h / 2) / img.height
             nw = w / img.width
@@ -67,11 +84,11 @@ class CocoDetection(Dataset):
             boxes = torch.tensor(boxes, dtype=torch.float32)
             labels = torch.tensor(labels, dtype=torch.int64)
 
-        # Return numpy arrays (ONNX expects numpy)
+        # Return format matching your ONNX model inputs - Olive will add batch dimension
         return {
-            "images": img_t.unsqueeze(0).numpy(),   # add batch dim
-            "im_shape": np.array([[img.height, img.width]], dtype=np.float32),
-            "scale_factor": np.array([[1.0, 1.0]], dtype=np.float32),
+            "im_shape": im_shape_tensor.astype(np.float32),     # [2]
+            "image": image_tensor.astype(np.float32),           # [3, 640, 640]
+            "scale_factor": scale_factor_tensor.astype(np.float32), # [2]
         }, {
             "boxes": boxes.numpy(),
             "labels": labels.numpy()
@@ -87,26 +104,74 @@ def dataset_load(data_dir, annotation_file, **kwargs):
 
 
 # -------------------------------
-# Postprocess
+# Postprocess (matching your working script)
 # -------------------------------
+def decode_outputs(outputs, conf_threshold=0.5):
+    """Handle both [N,6] and [B,N,C] style outputs - copied from your working script."""
+    detections = []
+    for out in outputs:
+        out = np.array(out)
+        # Case 1: [N,6] → [class_id, conf, x1,y1,x2,y2]
+        if len(out.shape) == 2 and out.shape[1] == 6:
+            for det in out:
+                cls_id, conf, x1, y1, x2, y2 = det
+                if conf >= conf_threshold:
+                    detections.append((int(cls_id), float(conf), [x1, y1, x2, y2]))
+        # Case 2: [B,N,C] → need to reshape
+        elif len(out.shape) == 3 and out.shape[2] >= 6:
+            for det in out.reshape(-1, out.shape[-1]):
+                cls_id, conf, x1, y1, x2, y2 = det[:6]
+                if conf >= conf_threshold:
+                    detections.append((int(cls_id), float(conf), [x1, y1, x2, y2]))
+    return detections
+
+
 @Registry.register_post_process()
 def dataset_post_process(outputs):
     """Turn model raw outputs into usable predictions."""
-    pred_logits = torch.from_numpy(outputs["pred_logits"])
-    pred_boxes = torch.from_numpy(outputs["pred_boxes"])
+    # Based on your model inspection:
+    # - fetch_name_0: [batch, 6] - detections in format [class_id, conf, x1, y1, x2, y2]
+    # - fetch_name_1: [batch] - number of detections
 
-    if pred_logits.numel() == 0 or pred_boxes.numel() == 0:
-        return {"boxes": torch.empty((0, 4)),
-                "labels": torch.empty((0,), dtype=torch.int64),
-                "scores": torch.empty((0,))}
+    if "fetch_name_0" in outputs:
+        detections_output = outputs["fetch_name_0"]
+    else:
+        # Fallback to first output
+        detections_output = list(outputs.values())[0]
 
-    probs = pred_logits.softmax(-1)[0, :, :-1]  # drop no-object class
-    scores, labels = probs.max(-1)
+    # Use the same decoding logic as your working script
+    detections = decode_outputs([detections_output], conf_threshold=0.1)  # Low threshold for quantization
+
+    if len(detections) == 0:
+        return {
+            "boxes": np.empty((0, 4), dtype=np.float32),
+            "labels": np.empty((0,), dtype=np.int64),
+            "scores": np.empty((0,), dtype=np.float32)
+        }
+
+    # Convert to the expected format
+    boxes = []
+    labels = []
+    scores = []
+
+    for cls_id, conf, bbox in detections:
+        # Convert from xyxy to cxcywh (normalized)
+        x1, y1, x2, y2 = bbox
+        # Assuming the detections are in pixel coordinates, normalize to [0,1]
+        # You might need to adjust this based on your model's actual output format
+        cx = (x1 + x2) / 2 / 640.0
+        cy = (y1 + y2) / 2 / 640.0
+        w = (x2 - x1) / 640.0
+        h = (y2 - y1) / 640.0
+
+        boxes.append([cx, cy, w, h])
+        labels.append(cls_id)
+        scores.append(conf)
 
     return {
-        "boxes": pred_boxes[0],
-        "labels": labels,
-        "scores": scores,
+        "boxes": np.array(boxes, dtype=np.float32),
+        "labels": np.array(labels, dtype=np.int64),
+        "scores": np.array(scores, dtype=np.float32),
     }
 
 
@@ -117,7 +182,7 @@ def calculate_iou_f1(preds, targets, iou_threshold=0.5):
     if len(preds["boxes"]) == 0 or len(targets["boxes"]) == 0:
         return 0.0, 0.0
 
-    pred_xyxy = cxcywh_to_xyxy(preds["boxes"])
+    pred_xyxy = cxcywh_to_xyxy(torch.from_numpy(preds["boxes"]))
     tgt_xyxy = cxcywh_to_xyxy(torch.from_numpy(targets["boxes"]))
 
     ious = []
