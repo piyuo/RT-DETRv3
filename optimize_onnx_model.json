@@ -1,0 +1,40 @@
+{
+  "input_model": {
+    "type": "ONNXModel",
+    "model_path": "output/rtdetrv3_r18vd_6x.onnx"
+  },
+  "systems": {
+    "local_system": {
+      "type": "LocalSystem",
+      "accelerators": [
+        {
+          "device": "cpu",
+          "execution_providers": ["CPUExecutionProvider"]
+        }
+      ]
+    }
+  },
+  "passes": {
+    "peephole_optimizer": {
+      "type": "OnnxPeepholeOptimizer"
+    },
+    "transformer_optimizer": {
+      "type": "OrtTransformersOptimization",
+      "opt_level": 0,
+      "float16": false,
+      "keep_io_types": false
+    },
+    "dynamic_quant": {
+      "type": "OnnxDynamicQuantization",
+      "precision": "int8"
+    },
+    "extract_adapters": {
+      "type": "ExtractAdapters"
+    }
+  },
+  "host": "local_system",
+  "target": "local_system",
+  "no_artifacts": true,
+  "output_dir": "output/olive",
+  "log_severity_level": 1
+}
