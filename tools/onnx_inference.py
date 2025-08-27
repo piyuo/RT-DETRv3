@@ -237,7 +237,7 @@ def parse_args():
     )
     ap.add_argument("--model", default="output/rtdetrv3_r18vd_6x.onnx")
     ap.add_argument("--image", default="demo/demo.jpg")
-    ap.add_argument("--out", default="output/demo_debug.jpg")
+    ap.add_argument("--out", default="output/demo.jpg")
     ap.add_argument("--conf", type=float, default=0.5)
     ap.add_argument("--debug", action="store_true")
     ap.add_argument("--dump-json", default="")
