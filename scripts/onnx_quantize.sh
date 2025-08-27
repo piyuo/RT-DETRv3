@@ -5,11 +5,6 @@
 # Activate the environment
 source onnx_env/bin/activate
 
-# Optimize the ONNX model
-#python3 tools/optimize_onnx_model.py \
-#	--model output/rtdetrv3_r18vd_6x.onnx \
-#	--out output/olive_rtdetrv3_int8 \
-#	--device cpu
 
 #olive auto-opt \
 #  --model_name_or_path output/rtdetrv3_r18vd_6x.onnx \
@@ -20,8 +15,11 @@ source onnx_env/bin/activate
 #  --save_config_file \
 #  --log_level 1
 
-
-
+# use olive to quantize the onnx model
 olive  run --config scripts/onnx_quantize.json
 
-#scripts/verify_onnx_model.sh
+# Rename the output model to a more descriptive name
+mv -f output/olive/model.onnx output/rtdetrv3_r18vd_6x.onnx
+
+# run inference on demo.jpg
+python3 tools/onnx_inference.py --debug

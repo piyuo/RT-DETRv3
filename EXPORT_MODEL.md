@@ -24,3 +24,12 @@ it will generate
 ```bash
   scripts/export_model.sh
 ```
+
+## Quantize onnx model
+
+run script, it will generate the quantized model at
+/output/rtdetrv3_r18vd_6x.onnx
+
+```bash
+  scripts/onnx_quantize.sh
+```
