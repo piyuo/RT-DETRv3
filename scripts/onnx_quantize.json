@@ -36,8 +36,8 @@
       "data_config": "coco_val_data",
       "quant_format": "QDQ",
       "activation_type": "int8",
-      "per_channel": false,
-      "op_types_to_quantize": ["Conv"]
+      "per_channel": true,
+      "op_types_to_quantize": ["Conv", "MatMul"]
     },
     "extract_adapters": {
       "type": "ExtractAdapters"
