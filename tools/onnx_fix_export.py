@@ -1,8 +1,10 @@
-# tools/fix_model.py
+# tools/onnx_fix_export.py
+# Fix common issues in exported ONNX models, such as mismatched ranks for Concat inputs
+
 import onnx
 from onnx import helper, TensorProto, shape_inference
 
-SRC = "output/rtdetrv3_r18vd_6x.onnx"
+SRC = "output/rtdetrv3_r18vd_6x_raw.onnx"
 DST = "output/rtdetrv3_r18vd_6x_fixed.onnx"
 
 def collect_shapes(model):

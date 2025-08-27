@@ -1,9 +1,19 @@
 {
 	"cSpell.words": [
 		"calib",
+		"Conv",
+		"libprotobuf",
+		"numba",
+		"onnxconverter",
+		"onnxoptimizer",
 		"opset",
+		"paddlepaddle",
 		"pdiparams",
 		"pdparams",
-		"rtdetrv"
+		"pycocotools",
+		"rtdetr",
+		"rtdetrv",
+		"torchvision",
+		"venv"
 	]
 }
