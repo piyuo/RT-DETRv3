@@ -35,7 +35,17 @@
       "type": "OnnxStaticQuantization",
       "data_config": "coco_val_data",
       "quant_format": "QDQ",
-      "activation_type": "uint8"
+      "activation_type": "uint8",
+      "per_channel": true,
+      "extra_options": {
+        "OpTypesToExclude": [
+          "Softmax",
+          "LayerNormalization",
+          "MatMul",
+          "Add",
+          "Gemm"
+        ]
+      }
     },
     "extract_adapters": {
       "type": "ExtractAdapters"
