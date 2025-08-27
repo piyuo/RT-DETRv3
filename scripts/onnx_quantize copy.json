@@ -35,8 +35,8 @@
       "type": "OnnxStaticQuantization",
       "data_config": "coco_val_data",
       "quant_format": "QDQ",
-      "activation_type": "int8",
-      "per_channel": false,
+      "activation_type": "uint8",
+      "per_channel": true,
       "op_types_to_quantize": ["Conv"]
     },
     "extract_adapters": {

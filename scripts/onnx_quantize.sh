@@ -19,7 +19,7 @@ source onnx_env/bin/activate
 olive  run --config scripts/onnx_quantize.json
 
 # Rename the output model to a more descriptive name
-mv -f output/olive/model.onnx output/rtdetrv3_r18vd_6x.onnx
+#mv -f output/olive/model.onnx output/rtdetrv3_r18vd_6x.onnx
 
 # run inference on demo.jpg
-python3 tools/onnx_inference.py --debug
+#python3 tools/onnx_inference.py --debug
