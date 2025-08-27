@@ -1,7 +1,7 @@
 {
   "input_model": {
     "type": "ONNXModel",
-    "model_path": "output/rtdetrv3_r18vd_6x.onnx"
+    "model_path": "output/rtdetrv3_r18vd_6x_raw.onnx"
   },
   "systems": {
     "local_system": {
