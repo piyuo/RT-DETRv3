@@ -1,4 +1,4 @@
-# scripts/optimize_onnx_model.sh
+# scripts/onnx_quantize.sh
 
 #!/bin/bash
 
@@ -22,6 +22,6 @@ source onnx_env/bin/activate
 
 
 
-olive  run --config optimize_onnx_model.json
+olive  run --config scripts/onnx_quantize.json
 
 #scripts/verify_onnx_model.sh

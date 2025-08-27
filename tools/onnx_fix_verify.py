@@ -1,7 +1,9 @@
-# tools/load_model.py
+# tools/onnx_fix_verify.py
+# Verify the fixed ONNX model is valid
+
 import onnx
 
-onnx_path = "output/rtdetrv3_r18vd_6x.onnx"
+onnx_path = "output/rtdetrv3_r18vd_6x_raw.onnx"
 
 print(f"Loading: {onnx_path}")
 model = onnx.load(onnx_path)
