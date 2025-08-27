@@ -6,4 +6,4 @@
 source onnx_env/bin/activate
 
 # Verify the ONNX model
-python3 tools/verify_onnx_model.py
+python3 tools/verify_onnx_model.py --debug

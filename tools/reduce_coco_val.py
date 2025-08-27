@@ -5,7 +5,7 @@
 # python3 tools/reduce_coco_val.py \
 # --input dataset/coco/annotations/instances_val2017.json \
 # --output dataset/coco/annotations/simple_val2017.json \
-# --num-images 10 --strategy random --seed 42
+# --num-images 250 --strategy random --seed 42
 
 import json
 import argparse
