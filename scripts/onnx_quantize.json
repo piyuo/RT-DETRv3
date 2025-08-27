@@ -12,6 +12,17 @@
           "execution_providers": ["CPUExecutionProvider"]
         }
       ]
+    },
+    "coreml_system": {
+      "type": "LocalSystem",
+      "accelerators": [
+        {
+          "device": "gpu",
+          "execution_providers": ["CoreMLExecutionProvider"],
+          "apple_gpu_only": false,
+          "apple_ane_only": true
+        }
+      ]
     }
   },
 
@@ -44,7 +55,7 @@
     }
   },
   "host": "local_system",
-  "target": "local_system",
+  "target": "coreml_system",
   "no_artifacts": true,
   "output_dir": "output/olive",
   "log_severity_level": 1
