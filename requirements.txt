@@ -1,8 +1,14 @@
+# requirements.txt
+# This file lists all the required packages to run the code.
+# You can install them using pip:
+# pip install -r requirements.txt
+
 numpy < 2.0
 tqdm
 typeguard
 visualdl>=2.2.0
-opencv-python <= 4.6.0
+opencv-python==4.9.0.80 #opencv-python <= 4.6.0 // original requirement is 4.6.0 but 4.9.0 also works
+
 PyYAML
 shapely
 scipy
@@ -22,3 +28,20 @@ pyclipper
 
 # for culane data augumetation
 imgaug>=0.4.0
+
+# for olive
+olive-ai
+onnxruntime
+onnx
+onnxruntime-tools
+onnxconverter-common
+onnxoptimizer
+
+# for paddlepaddle
+paddlepaddle
+scipy
+scikit-learn
+
+# for rtdetr.py
+torchvision
+pycocotools
