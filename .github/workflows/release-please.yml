@@ -1,0 +1,29 @@
+# .github/workflows/release-please.yml
+name: Release Please
+on:
+  push:
+    branches:
+      - main # our main branch
+  workflow_dispatch:
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write # This is important for label creation
+      contents: write # This is crucial for creating branches and committing changes
+      pull-requests: write # This is crucial for creating and updating PRs
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      release_url: ${{ steps.release.outputs.release_url }}
+      prerelease: ${{ steps.release.outputs.prerelease }}
+      id: ${{ steps.release.outputs.id }}
+      body: ${{ steps.release.outputs.body }}
+      upload_url: ${{ steps.release.outputs.upload_url }}
+    steps:
+      - name: Run Release Please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          release-type: python
+          target-branch: main
