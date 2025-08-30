@@ -41,6 +41,8 @@ onnxoptimizer
 paddlepaddle
 scipy
 scikit-learn
+llvmlite-0.44.0
+numba-0.61.2
 
 # for rtdetr.py
 torchvision
