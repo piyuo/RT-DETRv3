@@ -153,8 +153,9 @@ class RobustReIDEmbeddingGenerator:
                 raise RuntimeError("❌ No suitable backbone feature map output found! "
                                  "Consider using --feature-map-name to specify explicitly.")
 
-            # Sort by stride (prefer stride 32 for C5, then 16 for C4, then 8 for C3)
-            candidates.sort(key=lambda x: abs(x[2] - 32))
+            # Sort by stride (prefer stride 16 for C4, then 32 for C5, then 8 for C3)
+            # C4 features provide better spatial resolution for ReID embeddings
+            candidates.sort(key=lambda x: abs(x[2] - 16))
 
             self.feature_map_name, self.feature_map_shape, calculated_stride = candidates[0]
 

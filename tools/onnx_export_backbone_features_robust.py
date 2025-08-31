@@ -79,9 +79,10 @@ def analyze_model_outputs(model: onnx.ModelProto, input_size: int = 640) -> List
 
             candidates.append(candidate_info)
 
-    # Sort candidates by likelihood (stride preference: 32 > 16 > 8, then by channels)
+    # Sort candidates by likelihood (stride preference: 16 > 32 > 8, then by channels)
+    # C4 features (stride 16) are preferred for ReID embeddings due to better spatial resolution
     def candidate_score(candidate):
-        stride_score = {32: 1000, 16: 900, 8: 800}.get(candidate['stride'], 0)
+        stride_score = {16: 1000, 32: 900, 8: 800}.get(candidate['stride'], 0)
         channel_score = candidate['channels']
         return stride_score + channel_score
 
@@ -141,11 +142,11 @@ def validate_feature_map_selection(candidate: Dict, input_size: int = 640) -> Tu
     if 'detect' in candidate['name'].lower() or 'pred' in candidate['name'].lower():
         warnings.append(f"Name '{candidate['name']}' suggests detection output, not backbone feature")
 
-    # Prefer C5 features (stride 32) for Re-ID
-    if candidate['stride'] == 32:
-        pass  # Ideal for Re-ID
-    elif candidate['stride'] == 16:
-        warnings.append("Using C4 features (stride 16) - good for Re-ID but C5 (stride 32) typically preferred")
+    # Prefer C4 features (stride 16) for Re-ID
+    if candidate['stride'] == 16:
+        pass  # Ideal for Re-ID - good balance of spatial resolution and semantic content
+    elif candidate['stride'] == 32:
+        warnings.append("Using C5 features (stride 32) - good semantic content but C4 (stride 16) typically preferred for Re-ID")
     elif candidate['stride'] == 8:
         warnings.append("Using C3 features (stride 8) - may be too high resolution for efficient Re-ID")
 
@@ -290,7 +291,7 @@ def export_backbone_features(input_path: str, output_path: str,
     print(f"   Output model: {output_path}")
     print(f"   Exported feature: {selected_candidate['name']}")
     print(f"   Feature shape: {selected_candidate['shape']}")
-    print(f"   Recommended for Re-ID: {'Yes' if selected_candidate['stride'] == 32 else 'Consider C5 layer if available'}")
+    print(f"   Recommended for Re-ID: {'Yes' if selected_candidate['stride'] == 16 else 'Consider C4 layer if available'}")
 
     return True
 
