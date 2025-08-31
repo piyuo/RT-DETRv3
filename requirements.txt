@@ -47,3 +47,4 @@ numba-0.61.2
 # for rtdetr.py
 torchvision
 pycocotools
+seaborn
