@@ -14,66 +14,30 @@ This repository now includes a **robust and production-ready** pipeline for gene
 
 ## Quick Start
 
-### 1. Export Model with Backbone Features (Enhanced)
+### 1. Export Model with Backbone Features
 
 ```bash
-# Auto-detect and export best backbone feature
-python tools/onnx_export_backbone_features_robust.py \
-    --input output/rtdetrv3_r18vd_6x_raw.onnx \
-    --output output/rtdetrv3_r18vd_6x_backbone.onnx
-
-# List available feature map candidates
-python tools/onnx_export_backbone_features_robust.py \
-    --input output/rtdetrv3_r18vd_6x_raw.onnx \
-    --list-only
-
-# Export specific feature map
-python tools/onnx_export_backbone_features_robust.py \
-    --input output/rtdetrv3_r18vd_6x_raw.onnx \
-    --output output/rtdetrv3_r18vd_6x_backbone.onnx \
-    --feature-map-name "p2o.pd_op.conv2d.18.0"
+# Auto-detect and export best backbone feature (C4)
+onnx/export_backbone.sh
 ```
 
 ### 2. Validate Pipeline (Recommended)
 
 ```bash
 # Run comprehensive validation
-python tools/validate_reid_pipeline.py \
-    --model output/rtdetrv3_r18vd_6x_backbone.onnx \
-    --image demo/demo.jpg \
-    --output output/reid_validation_report.json
+onnx/validate_reid_pipeline.sh
 ```
 
-### 3. Generate Re-ID Embeddings (Robust Version)
+### 3. Generate Re-ID Embeddings
 
 ```bash
-# Basic usage with robust generator
-python tools/reid_embeddings_robust.py \
-    --model output/rtdetrv3_r18vd_6x_backbone.onnx \
-    --image demo/demo.jpg
-
-# With explicit feature map name (recommended for production)
-python tools/reid_embeddings_robust.py \
-    --model output/rtdetrv3_r18vd_6x_backbone.onnx \
-    --image demo/demo.jpg \
-    --feature-map-name "p2o.pd_op.conv2d.18.0" \
-    --detection-layout cls_conf_xyxy \
-    --conf 0.5 \
-    --output output/reid \
-    --debug
-
-# With letterbox preprocessing (for models trained with aspect ratio preservation)
-python tools/reid_embeddings_robust.py \
-    --model output/rtdetrv3_r18vd_6x_backbone.onnx \
-    --image demo/demo.jpg \
-    --use-letterbox \
-    --debug
+onnx/reid_embeddings.sh
 ```
 
 ### 4. Test BoT-SORT Integration
 
 ```bash
-python tools/botsort_integration_test.py --results output/reid/demo_reid_results_robust.json
+python tools/botsort_integration_test.py --results onnx/validation/demo_reid_results.json
 ```
 
 ## Robustness Improvements
@@ -199,9 +163,9 @@ tools/
 output/
 ├── rtdetrv3_r18vd_6x_backbone.onnx             # Model with backbone features
 ├── reid_validation_report.json                  # 🆕 Validation results
-└── reid/
-    ├── demo_reid_results_robust.json           # 🆕 Robust Re-ID results
-    ├── demo_reid_detections_robust.jpg         # 🆕 Robust annotated image
+└── validation/
+    ├── demo_reid_results.json           # 🆕 Robust Re-ID results
+    ├── demo_reid_detections.jpg         # 🆕 Robust annotated image
     ├── demo_reid_embeddings.png                # Embedding visualization
     ├── botsort_analysis.json                   # BoT-SORT analysis
     └── botsort_relationships.png               # Relationship visualization

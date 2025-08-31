@@ -22,7 +22,7 @@ def test_same_image_consistency():
     print("🔄 Testing same image consistency...")
 
     try:
-        from reid_embeddings_robust import RobustReIDEmbeddingGenerator
+        from onnx.reid_embeddings import RobustReIDEmbeddingGenerator
 
         # Test with same image twice
         generator = RobustReIDEmbeddingGenerator(
@@ -65,7 +65,7 @@ def test_class_separability():
     print("🔄 Testing class separability...")
 
     try:
-        from reid_embeddings_robust import RobustReIDEmbeddingGenerator
+        from onnx.reid_embeddings import RobustReIDEmbeddingGenerator
 
         generator = RobustReIDEmbeddingGenerator(
             "output/rtdetrv3_r18vd_6x_backbone.onnx",
@@ -128,7 +128,7 @@ def test_embedding_quality():
     print("🔄 Testing embedding quality...")
 
     try:
-        from reid_embeddings_robust import RobustReIDEmbeddingGenerator
+        from onnx.reid_embeddings import RobustReIDEmbeddingGenerator
 
         generator = RobustReIDEmbeddingGenerator(
             "output/rtdetrv3_r18vd_6x_backbone.onnx",
@@ -181,7 +181,7 @@ def test_coordinate_consistency():
     print("🔄 Testing coordinate consistency...")
 
     try:
-        from reid_embeddings_robust import RobustReIDEmbeddingGenerator
+        from onnx.reid_embeddings import RobustReIDEmbeddingGenerator
 
         # Test both preprocessing methods
         methods = [
@@ -221,7 +221,7 @@ def test_feature_map_validation():
     print("🔄 Testing feature map validation...")
 
     try:
-        from onnx_export_backbone_features_robust import analyze_model_outputs
+        from onnx.export_backbone import analyze_model_outputs
         import onnx
 
         # Load and analyze model

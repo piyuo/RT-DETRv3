@@ -28,8 +28,8 @@ import warnings
 
 # Import the robust generator
 try:
-    from reid_embeddings_robust import RobustReIDEmbeddingGenerator, COCO_CLASS_LOOKUP
-    from onnx_export_backbone_features_robust import analyze_model_outputs
+    from reid_embeddings import RobustReIDEmbeddingGenerator, COCO_CLASS_LOOKUP
+    from export_backbone import analyze_model_outputs
     import onnxruntime as ort
     import onnx
     import cv2
@@ -274,7 +274,7 @@ class ReIDPipelineValidator:
 
         try:
             # Run full pipeline
-            embeddings = generator.process_image(image_path, conf_threshold=0.3, output_dir="temp_validation")
+            embeddings = generator.process_image(image_path, conf_threshold=0.3, output_dir="onnx/validation")
 
             if not embeddings:
                 check_result['status'] = 'FAIL'
@@ -604,34 +604,34 @@ class ReIDPipelineValidator:
 
     def print_summary(self):
         """Print a human-readable validation summary."""
-        print(f"\\n{'='*80}")
+        print(f"{'='*80}")
         print(f"RE-ID PIPELINE VALIDATION SUMMARY")
         print(f"{'='*80}")
         print(f"Overall Status: {self.validation_results['overall_status']}")
         print(f"Model: {self.validation_results['model_path']}")
         print(f"Timestamp: {self.validation_results['validation_timestamp']}")
 
-        print(f"\\n📊 Check Results:")
+        print(f"📊 Check Results:")
         for check_name, check_result in self.validation_results['checks'].items():
             status_emoji = {'PASS': '✅', 'WARN': '⚠️', 'FAIL': '❌', 'ERROR': '💥'}
             emoji = status_emoji.get(check_result['status'], '❓')
             print(f"   {emoji} {check_name.replace('_', ' ').title()}: {check_result['status']}")
 
         if self.validation_results['critical_issues']:
-            print(f"\\n🚨 Critical Issues:")
+            print(f"🚨 Critical Issues:")
             for issue in self.validation_results['critical_issues']:
                 print(f"   - {issue}")
 
         if self.validation_results['warnings']:
-            print(f"\\n⚠️  Warnings:")
+            print(f"⚠️  Warnings:")
             for warning in self.validation_results['warnings']:
                 print(f"   - {warning}")
 
-        print(f"\\n💡 Recommendations:")
+        print(f"💡 Recommendations:")
         for rec in self.validation_results['recommendations']:
             print(f"   - {rec}")
 
-        print(f"\\n{'='*80}")
+        print(f"{'='*80}")
 
 def main():
     parser = argparse.ArgumentParser(
@@ -671,13 +671,13 @@ def main():
 
         # Return appropriate exit code
         if results['overall_status'] == 'FAIL':
-            print("\\n❌ Validation failed - critical issues detected")
+            print("❌ Validation failed - critical issues detected")
             return 1
         elif results['overall_status'] == 'WARN':
-            print("\\n⚠️  Validation completed with warnings")
+            print("⚠️  Validation completed with warnings")
             return 0
         else:
-            print("\\n✅ Validation passed successfully")
+            print("✅ Validation passed successfully")
             return 0
 
     except Exception as e:

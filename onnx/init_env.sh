@@ -4,10 +4,10 @@
 
 
 # Create an environment with Python 3.11
-python3 -m venv onnx_env
+python3 -m venv onnx/env
 
 # Activate the environment
-source onnx_env/bin/activate
+source onnx/env/bin/activate
 
 
 # Install onnxruntime-tools if not already installed

@@ -190,3 +190,11 @@ olive_env/
 olive_output/
 .olive-cache/
 calib/
+
+
+# onnx
+onnx/input/
+onnx/backbone/
+onnx/env/
+onnx/output/
+onnx/validation/
