@@ -284,10 +284,11 @@ class ReIDEmbeddingGenerator:
             feat_y2 = y2 * scale_y
 
             # Clamp to feature map bounds
+            # Note: x2, y2 should be clamped to feat_w, feat_h (not -1) since slicing is exclusive
             feat_x1 = max(0, min(feat_w - 1, feat_x1))
             feat_y1 = max(0, min(feat_h - 1, feat_y1))
-            feat_x2 = max(0, min(feat_w - 1, feat_x2))
-            feat_y2 = max(0, min(feat_h - 1, feat_y2))
+            feat_x2 = max(feat_x1 + 1, min(feat_w, feat_x2))  # Ensure x2 > x1
+            feat_y2 = max(feat_y1 + 1, min(feat_h, feat_y2))  # Ensure y2 > y1
 
             scaled_bbox = [feat_x1, feat_y1, feat_x2, feat_y2]
             scaled_detections.append((cls_id, conf, bbox, scaled_bbox))
@@ -329,7 +330,19 @@ class ReIDEmbeddingGenerator:
             # Ensure valid region
             if x2 <= x1 or y2 <= y1:
                 if self.debug:
-                    print(f"  ⚠️  ROI {i+1}: Invalid region [{x1}:{x2}, {y1}:{y2}]")
+                    print(f"  ⚠️  ROI {i+1}: Invalid region [{x1}:{x2}, {y1}:{y2}] from scaled_bbox {scaled_bbox}")
+                continue
+
+            # Ensure coordinates are within bounds
+            x1 = max(0, min(feat_w - 1, x1))
+            y1 = max(0, min(feat_h - 1, y1))
+            x2 = max(x1 + 1, min(feat_w, x2))
+            y2 = max(y1 + 1, min(feat_h, y2))
+
+            # Double-check after adjustment
+            if x2 <= x1 or y2 <= y1:
+                if self.debug:
+                    print(f"  ⚠️  ROI {i+1}: Still invalid after adjustment [{x1}:{x2}, {y1}:{y2}]")
                 continue
 
             # Extract ROI from feature map
