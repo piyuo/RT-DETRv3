@@ -224,12 +224,12 @@ def main():
     parser = argparse.ArgumentParser(
         description="Test BoT-SORT integration with RT-DETRv3 Re-ID embeddings"
     )
-    parser.add_argument("--results", default="output/reid/demo_reid_results.json",
+    parser.add_argument("--results", default="onnx/validation/demo_reid_results.json",
                        help="Path to Re-ID results JSON file")
     parser.add_argument("--distance-threshold", type=float, default=0.3,
                        help="Distance threshold for matching")
-    parser.add_argument("--output", default="output/reid",
-                       help="Output directory for analysis results")
+    parser.add_argument("--output", default="onnx/output/validation",
+                       help="Output validation directory for analysis results")
 
     args = parser.parse_args()
 
