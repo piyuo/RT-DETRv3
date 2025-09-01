@@ -40,43 +40,47 @@ onnx/reid_embeddings.sh
 python tools/botsort_integration_test.py --results onnx/validation/demo_reid_results.json
 ```
 
-## Robustness Improvements
-
 ### Enhanced Pipeline Features
 
-The robust implementation (`reid_embeddings_robust.py`) addresses critical robustness concerns:
+The robust implementation (`reid_embeddings.py`) addresses critical concerns:
 
 #### 1. **Feature Map Selection Validation**
+
 - **Explicit naming**: Use `--feature-map-name` to avoid confusion with detection outputs
 - **Stride verification**: Ensures feature maps have expected strides (8, 16, 32)
 - **Multi-candidate analysis**: Evaluates all potential backbone features and ranks them
 - **Validation warnings**: Alerts about unusual feature map characteristics
 
 #### 2. **Detection Format Verification**
+
 - **Layout specification**: Support for different detection formats (`cls_conf_xyxy`, `xywh_score_cls`)
 - **Raw detection validation**: Prints first 5 detection rows for manual verification
 - **Range checking**: Validates class IDs, confidence scores, and bbox coordinates
 - **Format assertion**: Ensures detection tensor has expected column count
 
 #### 3. **Coordinate Space Consistency**
+
 - **Letterbox support**: Maintains aspect ratio during preprocessing (use `--use-letterbox`)
 - **Coordinate validation**: Checks bbox validity before and after scaling
 - **Scaling verification**: Validates coordinate transformations at each step
 - **Multiple preprocessing modes**: Compare simple resize vs letterbox preprocessing
 
 #### 4. **Robust Input Feeding**
+
 - **Explicit matching**: Maps inputs by name patterns (`image`, `shape`, `scale`)
 - **Validation checks**: Ensures all required inputs are provided
 - **Fallback handling**: Graceful handling of ambiguous input configurations
 - **Error reporting**: Clear messages for input mapping failures
 
 #### 5. **Enhanced RoI Extraction**
+
 - **Improved clamping**: Uses round/ceil strategy for integer coordinate conversion
 - **Minimum size enforcement**: Ensures RoIs are at least 2×2 pixels
 - **Invalid region filtering**: Automatically discards malformed regions
 - **Quality statistics**: Reports percentage of discarded regions
 
 #### 6. **Embedding Quality Assurance**
+
 - **NaN/Inf detection**: Validates embeddings for numerical stability
 - **Norm verification**: Ensures L2 normalization produces unit vectors
 - **Separability analysis**: Measures intra-class vs inter-class distances
@@ -87,13 +91,11 @@ The robust implementation (`reid_embeddings_robust.py`) addresses critical robus
 Before deploying to production, run the validation script:
 
 ```bash
-python tools/validate_reid_pipeline.py \
-    --model your_model.onnx \
-    --image test_image.jpg \
-    --output validation_report.json
+onnx/validate_reid_pipeline.sh
 ```
 
 The validator checks:
+
 - ✅ **Model Structure**: Feature map candidates and backbone identification
 - ✅ **Detection Format**: Tensor layout and coordinate validation
 - ✅ **Coordinate Consistency**: Preprocessing and scaling verification
@@ -102,32 +104,8 @@ The validator checks:
 
 ### Common Issues and Solutions
 
-#### Issue: "No likely backbone feature map candidates found"
-**Solution**: Use `--list-only` to see all candidates, then specify with `--feature-map-name`
-
-```bash
-# List candidates
-python tools/onnx_export_backbone_features_robust.py --input model.onnx --list-only
-
-# Export specific feature
-python tools/onnx_export_backbone_features_robust.py \
-    --input model.onnx --output model_backbone.onnx \
-    --feature-map-name "your_chosen_feature"
-```
-
-#### Issue: "Detection format validation failed"
-**Solution**: Check raw detection output and adjust layout parameter
-
-```bash
-# Debug detection format
-python tools/reid_embeddings_robust.py --model model.onnx --image image.jpg --debug
-
-# Try different layout
-python tools/reid_embeddings_robust.py \
-    --detection-layout xywh_score_cls --debug
-```
-
 #### Issue: "High percentage of invalid RoI regions"
+
 **Solution**: Use letterbox preprocessing or different feature map resolution
 
 ```bash
@@ -141,21 +119,24 @@ python tools/onnx_export_backbone_features_robust.py \
 ```
 
 #### Issue: "Poor class separability detected"
+
 **Solution**: Consider multi-scale features or model fine-tuning
 
 ```bash
 # Analyze separability in detail
-python tools/validate_reid_pipeline.py --model model.onnx --image image.jpg --debug
+onnx/validate_reid_pipeline.sh
 ```
+
 ## File Structure (Updated)
 
 ```text
-tools/
-├── reid_embeddings.py                           # Original Re-ID generator
-├── reid_embeddings_robust.py                    # 🆕 Robust Re-ID generator (recommended)
-├── onnx_export_backbone_features.py             # Original backbone feature exporter
-├── onnx_export_backbone_features_robust.py      # 🆕 Enhanced backbone feature exporter
-├── validate_reid_pipeline.py                    # 🆕 Comprehensive pipeline validator
+onnx/
+├── reid_embeddings.py                           # Re-ID generator
+├── reid_embeddings.sh                           # Script to run Re-ID generator
+├── export_backbone.py                           # Backbone feature exporter
+├── export_backbone.sh                           # Script to run Backbone feature exporter
+├── validate_reid_pipeline.py                    # Comprehensive pipeline validator
+├── validate_reid_pipeline.sh                    # Script to run Comprehensive pipeline validator
 ├── botsort_integration_test.py                  # BoT-SORT integration testing
 ├── reid_usage_example.py                        # Usage examples
 └── onnx_inference.py                            # Basic ONNX inference verification
@@ -381,26 +362,31 @@ python tools/test_robust_reid.py \
 Before deploying to production, ensure:
 
 1. **✅ Model Structure Validation**
+
    ```bash
    python tools/onnx_export_backbone_features_robust.py --input model.onnx --list-only
    ```
 
 2. **✅ Pipeline Validation**
+
    ```bash
    python tools/validate_reid_pipeline.py --model model.onnx --image test.jpg
    ```
 
 3. **✅ Detection Format Verification**
+
    ```bash
    python tools/reid_embeddings_robust.py --model model.onnx --image test.jpg --debug
    ```
 
 4. **✅ Embedding Quality Check**
+
    ```bash
    python tools/test_robust_reid.py --model model.onnx --image test.jpg
    ```
 
 5. **✅ BoT-SORT Integration Test**
+
    ```bash
    python tools/botsort_integration_test.py --results output/reid/results.json
    ```
