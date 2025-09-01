@@ -46,6 +46,18 @@ onnx/validate_pedestrian.sh
 onnx/reid_embeddings.sh
 ```
 
+### 6. RT-DETRv3 quantization, from onnx/backbone -> onnx/output
+
+```bash
+onnx/quantize.sh
+```
+
+### 7. run inference on demo.jpg to validate the output model
+
+```bash
+onnx/inference.sh
+```
+
 ### Common Issues and Solutions
 
 #### Issue: "Poor class separability detected"

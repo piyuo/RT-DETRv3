@@ -1,4 +1,5 @@
-# tools/rtdetr.py
+# onnx/quantize.py
+# Olive integration for RT-DETRv3 quantization
 
 import os
 import numpy as np

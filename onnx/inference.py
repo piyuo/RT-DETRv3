@@ -1,5 +1,5 @@
-# scripts/onnx_inference.py
-# Verify the exported (possibly quantized) ONNX model by running inference and visualizing results.
+# onnx/inference.py
+# Verify the output (possibly quantized) ONNX model by running inference and visualizing results.
 
 import onnxruntime as ort
 import numpy as np

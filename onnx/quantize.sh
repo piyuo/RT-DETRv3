@@ -1,4 +1,5 @@
-# scripts/onnx_quantize.sh
+# onnx/quantize.sh
+# Quantize RT-DETRv3 ONNX model using Olive
 
 #!/bin/bash
 
@@ -20,6 +21,3 @@ olive  run --config onnx/quantize.json
 
 # Rename the output model to a more descriptive name
 mv -f onnx/output/olive/model.onnx onnx/output/rtdetrv3_r18vd_6x.onnx
-
-# run inference on demo.jpg
-python3 onnx/inference.py --debug
