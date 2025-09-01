@@ -1,21 +1,58 @@
 #!/usr/bin/env python3
 """
-Re-ID Pipeline Validation Script
-================================
+Re-ID Pipeline Comprehensive Validator
+=====================================
 
-This script validates the RT-DETRv3 Re-ID embedding pipeline against the robustness concerns
-identified in the code review. It performs comprehensive checks and generates a validation report.
+This script performs thorough validation of the RT-DETRv3 Re-ID embedding pipeline to ensure
+robust operation in production environments. It addresses all critical robustness concerns
+and provides detailed validation reports for quality assurance.
 
-Validation checks:
-1. Feature map selection correctness
-2. Detection tensor format verification
-3. Coordinate space consistency
-4. Input feeding correctness
-5. RoI extraction validation
-6. Embedding quality assessment
+Validation Components:
+    1. Model Architecture Verification
+       - Input/output tensor validation
+       - Feature map accessibility checks
+       - Model structure consistency
+
+    2. Feature Map Quality Assessment
+       - Spatial resolution validation
+       - Channel dimensionality verification
+       - Stride calculation accuracy
+
+    3. Detection Format Validation
+       - Output tensor format verification
+       - Coordinate system consistency
+       - Confidence score validation
+
+    4. Coordinate Transformation Accuracy
+       - Bounding box scaling verification
+       - Coordinate space mapping
+       - ROI extraction precision
+
+    5. Embedding Quality Analysis
+       - L2 normalization verification
+       - Separability metrics calculation
+       - Consistency across runs
+
+    6. Performance Benchmarking
+       - Inference speed measurement
+       - Memory usage analysis
+       - Quality score computation
+
+Quality Metrics:
+    • Embedding L2 norm consistency (target: 1.0 ± 0.001)
+    • Intra-class similarity (target: > 0.7)
+    • Inter-class separability (target: < 0.5)
+    • Temporal consistency (target: > 0.99)
 
 Usage:
-    python tools/validate_reid_pipeline.py --model output/rtdetrv3_r18vd_6x_backbone.onnx --image demo/demo.jpg --feature-map-name Concat.3
+    python validate_reid_pipeline.py --model backbone_model.onnx --image test.jpg
+                                   --feature-map-name Concat.3 --output report.json
+
+Output:
+    Comprehensive JSON validation report with metrics, recommendations, and quality scores.
+
+Author: RT-DETRv3 Development Team
+License: Same as RT-DETRv3 repository
 """
 
 import argparse

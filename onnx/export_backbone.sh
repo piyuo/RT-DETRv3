@@ -1,13 +1,56 @@
+#!/bin/bash
 # onnx/export_backbone.sh
-# Auto-detect and export best backbone feature (C4)
+#
+# RT-DETRv3 Backbone Feature Exporter
+# ===================================
+#
+# This script extracts backbone feature maps from the original RT-DETRv3 ONNX model
+# and creates a new model with accessible backbone outputs for Re-ID embedding generation.
+#
+# Process:
+# 1. Analyzes the original model structure to identify feature map candidates
+# 2. Automatically selects the optimal backbone level (C4 recommended)
+# 3. Exports a modified model with backbone feature outputs accessible
+# 4. Validates the exported features meet quality requirements
+#
+# Input:  onnx/input/rtdetrv3_r18vd_6x.onnx  (Original RT-DETRv3 model)
+# Output: onnx/backbone/rtdetrv3_r18vd_6x.onnx (Model with backbone features)
+#
+# Usage Examples:
+#   ./export_backbone.sh                    # Export C4 features (recommended)
+#   ./export_backbone.sh --list-only        # List available feature candidates
+#   ./export_backbone.sh --level C3         # Export C3 features (higher resolution)
+#
 
-# Activate the environment
+# Activate the Python virtual environment
+echo "🔧 Activating Python environment..."
 source onnx/env/bin/activate
 
-#!/bin/bash
+# Verify environment activation
+if [[ "$VIRTUAL_ENV" == "" ]]; then
+    echo "❌ Failed to activate virtual environment"
+    exit 1
+fi
 
+echo "🚀 Starting backbone feature extraction..."
+echo "   Input model: onnx/input/rtdetrv3_r18vd_6x.onnx"
+echo "   Output model: onnx/backbone/rtdetrv3_r18vd_6x.onnx"
+echo "   Feature level: C4 (optimal for Re-ID)"
+
+# Run the backbone export script with optimized parameters
 python3 onnx/export_backbone.py \
     --input onnx/input/rtdetrv3_r18vd_6x.onnx \
     --output onnx/backbone/rtdetrv3_r18vd_6x.onnx \
     --level C4
-    #--list-only
+
+# Optional: List available feature candidates without exporting
+# Add --list-only flag to see all available backbone feature options
+
+# Check if export was successful
+if [ $? -eq 0 ]; then
+    echo "✅ Backbone feature extraction completed successfully"
+    echo "   Next step: Run validate_reid_pipeline.sh to validate the exported features"
+else
+    echo "❌ Backbone feature extraction failed"
+    exit 1
+fi

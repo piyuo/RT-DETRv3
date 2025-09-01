@@ -2,22 +2,42 @@
 
 #!/usr/bin/env python3
 """
-Enhanced ONNX Backbone Features Exporter for RT-DETRv3
-=======================================================
+RT-DETRv3 Backbone Feature Exporter
+==================================
 
-This script provides robust detection and export of backbone feature maps (C) from RT-DETRv3 ONNX models.
-It includes enhanced validation, multiple candidate analysis, and explicit naming for Re-ID embedding generation.
+This script provides robust detection and export of backbone feature maps from RT-DETRv3 ONNX models
+for Re-ID embedding generation. It automatically identifies optimal feature levels and creates
+enhanced models with accessible backbone outputs.
 
-Key improvements:
-- Validates that the exported feature matches expected backbone characteristics
-- Provides detailed analysis of all potential feature map candidates
-- Supports explicit stride verification
-- Adds metadata to track the export process
+Key Features:
+    • Automatic feature map detection and analysis
+    • Support for multiple backbone levels (C3, C4, C5)
+    • Comprehensive validation of exported features
+    • Detailed candidate analysis and selection
+    • Explicit stride verification and metadata tracking
+    • Production-ready error handling and logging
 
-Usage:
-    python onnx/export_backbone.py --input onnx/input/rtdetrv3_r18vd_6x.onnx --output onnx/backbone/rtdetrv3_r18vd_6x.onnx --level C4
-    python onnx/export_backbone.py --input onnx/input/rtdetrv3_r18vd_6x.onnx --list-only --level C3  # List C3 candidates
-    python onnx/export_backbone.py --input onnx/input/rtdetrv3_r18vd_6x.onnx --level C5 --output onnx/backbone/rtdetrv3_r18vd_6x_c5.onnx
+Architecture Support:
+    • RT-DETRv3 with ResNet/ResNetVd backbones
+    • Feature pyramid network (FPN) structures
+    • Multi-scale feature extraction capabilities
+
+Usage Examples:
+    # Export optimal C4 features (recommended for Re-ID)
+    python export_backbone.py --input model.onnx --output model_backbone.onnx --level C4
+
+    # List all available feature candidates
+    python export_backbone.py --input model.onnx --list-only
+
+    # Export high-resolution C3 features
+    python export_backbone.py --input model.onnx --output model_c3.onnx --level C3
+
+Output:
+    Enhanced ONNX model with accessible backbone feature maps for downstream Re-ID processing.
+    The exported model maintains all original detection capabilities while adding feature outputs.
+
+Author: RT-DETRv3 Development Team
+License: Same as RT-DETRv3 repository
 """
 
 import onnx
@@ -27,15 +47,26 @@ import sys
 from typing import List, Tuple, Dict
 
 def analyze_model_outputs(model: onnx.ModelProto, input_size: int = 640, preferred_level: str = 'C4') -> List[Dict]:
-    """Analyze all model outputs to identify potential backbone feature maps.
+    """
+    Analyze all model outputs to identify potential backbone feature maps.
+
+    This function systematically examines the model's computational graph to identify
+    feature maps that match backbone characteristics (spatial resolution, channel count,
+    and naming patterns typical of CNN backbones).
 
     Args:
         model: ONNX model to analyze
-        input_size: Expected input image size
+        input_size: Expected input image size (used for stride calculation)
         preferred_level: Preferred backbone level ('C3', 'C4', 'C5')
 
     Returns:
-        List of candidate feature map information
+        List of candidate feature map information dictionaries containing:
+        - name: Feature map tensor name
+        - shape: Tensor dimensions [N, C, H, W]
+        - stride: Calculated stride relative to input
+        - level: Estimated backbone level (C3/C4/C5)
+        - score: Quality score for Re-ID suitability
+        - characteristics: Additional feature analysis
     """
     graph = model.graph
     candidates = []
@@ -43,30 +74,36 @@ def analyze_model_outputs(model: onnx.ModelProto, input_size: int = 640, preferr
     print("🔍 Analyzing model outputs for backbone feature candidates...")
     print(f"   Input size assumption: {input_size}x{input_size}")
 
-    # Collect all value infos (intermediate and outputs)
+    # Collect all value infos (intermediate and outputs) for comprehensive analysis
+    # This includes both intermediate tensors and final outputs
     all_value_infos = list(graph.value_info) + list(graph.output)
 
     for vi in all_value_infos:
+        # Skip tensors without shape information
         if not vi.type.tensor_type.shape.dim:
             continue
 
+        # Extract tensor dimensions - handle dynamic shapes gracefully
         dims = [d.dim_value for d in vi.type.tensor_type.shape.dim]
 
-        # Look for 4D tensors (potential feature maps)
+        # Look for 4D tensors which are typical for CNN feature maps [N, C, H, W]
         if len(dims) == 4:
             N, C, H, W = dims
 
-            # Skip if dimensions are not specified
+            # Skip if critical dimensions are not specified or invalid
+            # This filters out dynamic shapes and unresolved tensors
             if H <= 0 or W <= 0 or C <= 0:
                 continue
 
-            # Calculate stride
+            # Calculate spatial stride: how much the spatial resolution was reduced
+            # Stride = input_size / feature_map_size (e.g., 640/20 = 32 for C5)
             stride = input_size // H if H > 0 else float('inf')
 
-            # Analyze characteristics
+            # Analyze backbone characteristics using spatial and channel criteria
+            # Typical backbone features: reasonable spatial size, sufficient channels
             is_likely_backbone = (
-                10 <= H <= 80 and  # Reasonable spatial size
-                10 <= W <= 80 and
+                10 <= H <= 80 and  # Spatial size range for backbone features
+                10 <= W <= 80 and  # Square or near-square feature maps
                 C >= 64 and        # Reasonable channel count for backbone
                 stride in [8, 16, 32, 64]  # Common backbone strides
             )

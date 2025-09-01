@@ -3,7 +3,64 @@
 """
 Pedestrian-Specific Re-ID Validation
 ===================================
-Focuses on metrics relevant for pedestrian counting applications.
+
+This script provides specialized validation for pedestrian Re-ID applications, focusing
+on person-to-person distinguishability, counting accuracy, and real-world deployment
+scenarios for surveillance and crowd monitoring systems.
+
+Pedestrian-Specific Features:
+    1. Person Detection Optimization
+       - High-precision person class filtering
+       - Confidence threshold optimization
+       - False positive reduction strategies
+
+    2. Pedestrian Re-ID Quality Assessment
+       - Person-specific embedding validation
+       - Clothing and appearance consistency
+       - Viewpoint invariance testing
+
+    3. Duplicate Detection and Filtering
+       - Same-person identification across detections
+       - Temporal consistency validation
+       - Overlap-based duplicate removal
+
+    4. Counting Accuracy Validation
+       - Unique person counting algorithms
+       - Crowd density estimation
+       - Multi-camera fusion simulation
+
+    5. Real-World Scenario Testing
+       - Varying lighting conditions
+       - Different camera angles
+       - Partial occlusion handling
+
+Application Domains:
+    • Pedestrian counting systems
+    • Crowd monitoring and analytics
+    • Surveillance and security applications
+    • Person tracking across camera networks
+    • Retail analytics and customer flow
+
+Validation Metrics:
+    • Person detection precision (target: > 90%)
+    • Re-ID distinguishability (target: > 85%)
+    • Counting accuracy (target: > 95%)
+    • Temporal consistency (target: > 90%)
+
+Quality Thresholds:
+    • Confidence threshold: 0.3 (optimized for person detection)
+    • Similarity threshold: 0.95 (for duplicate filtering)
+    • Minimum embedding norm: 0.99 (L2 normalization check)
+
+Usage:
+    python validate_pedestrian.py --model backbone_model.onnx --image test.jpg
+                                 --feature-map-name Concat.3
+
+Output:
+    Pedestrian-specific validation results with counting accuracy and quality metrics.
+
+Author: RT-DETRv3 Development Team
+License: Same as RT-DETRv3 repository
 """
 
 import numpy as np

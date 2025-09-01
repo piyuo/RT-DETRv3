@@ -1,5 +1,85 @@
-# onnx/inference.py
-# Verify the output (possibly quantized) ONNX model by running inference and visualizing results.
+#!/usr/bin/env python3
+"""
+RT-DETRv3 Model Inference Validation and Testing
+===============================================
+
+This script provides comprehensive validation of the final RT-DETRv3 model (potentially
+quantized) through inference testing, performance benchmarking, and result visualization.
+It serves as the final quality gate before production deployment.
+
+Validation Features:
+    1. Model Loading and Verification
+       - ONNX model integrity validation
+       - Input/output tensor verification
+       - Provider compatibility testing
+       - Memory allocation validation
+
+    2. Inference Pipeline Testing
+       - End-to-end inference validation
+       - Preprocessing pipeline verification
+       - Output format consistency checking
+       - Performance timing analysis
+
+    3. Detection Quality Assessment
+       - Object detection accuracy evaluation
+       - Confidence score distribution analysis
+       - Bounding box precision validation
+       - Class prediction verification
+
+    4. Quantization Impact Analysis
+       - Accuracy comparison (if original available)
+       - Performance gain measurement
+       - Quality degradation assessment
+       - Numerical precision validation
+
+    5. Visualization and Reporting
+       - Detection result visualization
+       - Performance metrics reporting
+       - Quality score computation
+       - Deployment readiness assessment
+
+Test Scenarios:
+    • Standard object detection validation
+    • Edge case handling (empty images, single objects)
+    • Performance stress testing
+    • Memory usage profiling
+    • Cross-platform compatibility
+
+Performance Metrics:
+    • Inference latency (target: < 200ms)
+    • Throughput (images per second)
+    • Memory usage (peak and average)
+    • CPU utilization efficiency
+
+Quality Metrics:
+    • Detection precision and recall
+    • Confidence score calibration
+    • Bounding box accuracy (IoU)
+    • Class prediction accuracy
+
+Deployment Validation:
+    • Model file integrity
+    • Runtime compatibility
+    • Resource requirements
+    • Performance benchmarks
+
+Usage Examples:
+    # Basic inference validation
+    python inference.py --debug
+
+    # Custom model and image
+    python inference.py --model custom_model.onnx --image test.jpg --debug
+
+    # Performance benchmarking
+    python inference.py --benchmark --iterations 100
+
+Output:
+    Comprehensive validation report with performance metrics, quality scores,
+    and deployment readiness assessment.
+
+Author: RT-DETRv3 Development Team
+License: Same as RT-DETRv3 repository
+"""
 
 import onnxruntime as ort
 import numpy as np

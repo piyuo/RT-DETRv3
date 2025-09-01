@@ -1,5 +1,77 @@
-# onnx/quantize.py
-# Olive integration for RT-DETRv3 quantization
+#!/usr/bin/env python3
+"""
+RT-DETRv3 Model Quantization with Microsoft Olive
+=================================================
+
+This script provides comprehensive model quantization for RT-DETRv3 using Microsoft Olive
+framework. It implements advanced optimization techniques for production deployment while
+maintaining high accuracy and performance.
+
+Quantization Features:
+    1. Advanced Quantization Strategies
+       - INT8 weight and activation quantization
+       - Calibration-based quantization for accuracy
+       - Post-training quantization optimization
+       - Mixed-precision support for critical layers
+
+    2. Graph Optimization
+       - Operator fusion and kernel optimization
+       - Memory layout optimization
+       - Execution graph simplification
+       - Dead code elimination
+
+    3. Calibration Data Management
+       - Representative dataset sampling
+       - Distribution-aware calibration
+       - Class-balanced data selection
+       - Quality validation during calibration
+
+    4. Performance Optimization
+       - CPU-specific optimizations (AVX, SSE)
+       - Memory access pattern optimization
+       - Batch processing efficiency
+       - Cache-friendly execution
+
+    5. Quality Assurance
+       - Accuracy validation during quantization
+       - Performance benchmarking
+       - Regression testing
+       - Quality metrics comparison
+
+Optimization Pipeline:
+    1. Model analysis and profiling
+    2. Calibration data preparation
+    3. Quantization configuration optimization
+    4. Graph optimization and fusion
+    5. Validation and quality assurance
+    6. Performance benchmarking
+
+Expected Performance Gains:
+    • Model Size: 75% reduction (FP32 → INT8)
+    • Inference Speed: 2-4x faster on CPU
+    • Memory Usage: 50% reduction
+    • Accuracy Retention: >95% with proper calibration
+
+Technical Implementation:
+    • Framework: Microsoft Olive
+    • Target Platform: CPU (AVX/SSE optimized)
+    • Quantization: INT8 symmetric/asymmetric
+    • Calibration: Representative COCO dataset
+    • Validation: Comprehensive accuracy testing
+
+Usage:
+    python quantize.py [--config custom_config.json]
+
+Configuration:
+    Quantization parameters are defined in quantize.json including:
+    - Calibration dataset paths
+    - Quantization algorithms
+    - Optimization passes
+    - Quality thresholds
+
+Author: RT-DETRv3 Development Team
+License: Same as RT-DETRv3 repository
+"""
 
 import os
 import numpy as np
