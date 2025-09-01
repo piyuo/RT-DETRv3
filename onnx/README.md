@@ -34,7 +34,13 @@ onnx/validate_reid_pipeline.sh
 onnx/reid_embeddings.sh
 ```
 
-### 4. Test BoT-SORT Integration
+### 5. Validate pedestrian reid embedding
+
+```bash
+validate_pedestrian.sh
+```
+
+### 5. Test BoT-SORT Integration
 
 ```bash
 python tools/botsort_integration_test.py --results onnx/validation/demo_reid_results.json
