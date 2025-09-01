@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository now includes a **robust and production-ready** pipeline for generating Re-ID (Re-Identification) embeddings from RT-DETRv3 model with backbone features. These embeddings can be used in BoT-SORT for robust multi-object tracking.
+This folder contain pipeline for generating Re-ID (Re-Identification) embeddings from RT-DETRv3 model with backbone features. These embeddings can be used in BoT-SORT for multi-object tracking.
 
 ### Key Features
 
@@ -17,21 +17,21 @@ This repository now includes a **robust and production-ready** pipeline for gene
 ### 1. Export Model with Backbone Features
 
 ```bash
-# Auto-detect and export best backbone feature (C4)
+# Auto-detect and export best backbone feature (C4), it use original model in onnx/input and convert it to onnx/backbone
 onnx/export_backbone.sh
 ```
 
-### 2. Validate Pipeline (Recommended)
+### 2. Validate Pipeline (Recommended), validate if C4 level enough, C4 recommend in most paper
 
 ```bash
 # Run comprehensive validation
 onnx/validate_reid_pipeline.sh
 ```
 
-### 3. Generate Re-ID Embeddings
+### 3. Test BoT-SORT Integration, use result from Validate Pipeline
 
 ```bash
-onnx/reid_embeddings.sh
+onnx/botsort_integration_test.sh
 ```
 
 ### 4. Validate pedestrian reid embedding
@@ -40,12 +40,11 @@ onnx/reid_embeddings.sh
 onnx/validate_pedestrian.sh
 ```
 
-### 5. Test BoT-SORT Integration
+### 5. Sample code to generate Re-ID Embeddings
 
 ```bash
-onnx/botsort_integration_test.sh
+onnx/reid_embeddings.sh
 ```
-
 
 ### Common Issues and Solutions
 

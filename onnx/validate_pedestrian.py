@@ -53,7 +53,7 @@ def production_pedestrian_counting(model_path: str, image_path: str, feature_map
 
     # Generate embeddings
     embeddings = generator.process_image(image_path, conf_threshold=conf_threshold,
-                                       output_dir="output/validation")
+                                       output_dir="onnx/validation")
 
     # Filter only people (class_id = 0)
     people_embeddings = [
@@ -209,7 +209,7 @@ if __name__ == "__main__":
                        help="Path to ONNX model")
     parser.add_argument("--image", default="onnx/demo/demo.jpg",
                        help="Path to test image")
-    parser.add_argument("--feature-map", default="Concat.5",
+    parser.add_argument("--feature-map-name", default="Concat.5",
                        help="Feature map name (C3=Concat.5, C4=Concat.3)")
     parser.add_argument("--conf-threshold", type=float, default=0.3,
                        help="Confidence threshold for detections")
@@ -224,20 +224,20 @@ if __name__ == "__main__":
     print("=" * 50)
     print(f"Model: {args.model}")
     print(f"Image: {args.image}")
-    print(f"Feature map: {args.feature_map}")
+    print(f"Feature map: {args.feature_map_name}")
     print(f"Confidence threshold: {args.conf_threshold}")
     print(f"Similarity threshold: {args.similarity_threshold}")
     print("")
 
     if args.mode in ["validate", "both"]:
         print("🔍 Running Validation...")
-        results = validate_pedestrian_reid(args.model, args.image, args.feature_map)
+        results = validate_pedestrian_reid(args.model, args.image, args.feature_map_name)
         print("")
 
     if args.mode in ["production", "both"]:
         print("🏭 Running Production Counting...")
         unique_people = production_pedestrian_counting(
-            args.model, args.image, args.feature_map,
+            args.model, args.image, args.feature_map_name,
             args.conf_threshold, args.similarity_threshold
         )
 

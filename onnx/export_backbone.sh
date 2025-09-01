@@ -9,5 +9,5 @@ source onnx/env/bin/activate
 python3 onnx/export_backbone.py \
     --input onnx/input/rtdetrv3_r18vd_6x.onnx \
     --output onnx/backbone/rtdetrv3_r18vd_6x.onnx \
-    --level C3
+    --level C4
     #--list-only

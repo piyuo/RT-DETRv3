@@ -15,7 +15,7 @@ Validation checks:
 6. Embedding quality assessment
 
 Usage:
-    python tools/validate_reid_pipeline.py --model output/rtdetrv3_r18vd_6x_backbone.onnx --image demo/demo.jpg --feature-map-name Concat.5
+    python tools/validate_reid_pipeline.py --model output/rtdetrv3_r18vd_6x_backbone.onnx --image demo/demo.jpg --feature-map-name Concat.3
 """
 
 import argparse
