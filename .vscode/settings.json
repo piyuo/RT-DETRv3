@@ -3,6 +3,7 @@
 		"botsort",
 		"calib",
 		"Conv",
+		"distinguishability",
 		"libprotobuf",
 		"modelmeta",
 		"numba",

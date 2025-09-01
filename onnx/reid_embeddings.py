@@ -385,6 +385,10 @@ class RobustReIDEmbeddingGenerator:
             print(f"Feature map range: [{feature_map.min():.4f}, {feature_map.max():.4f}]")
             print(f"Feature map mean: {feature_map.mean():.4f}, std: {feature_map.std():.4f}")
 
+        # Validate feature map quality
+        if not self._validate_feature_map_quality(feature_map):
+            raise RuntimeError("❌ Feature map validation failed!")
+
         # Extract and validate detections
         detections = self._extract_and_validate_detections(outputs, output_names)
 
@@ -424,7 +428,7 @@ class RobustReIDEmbeddingGenerator:
         return detections
 
     def _validate_detection_format(self, sample_detections: List):
-        """Validate detection tensor format and print sample for verification.
+        """Enhanced detection format validation with comprehensive checks.
 
         Args:
             sample_detections: Sample of raw detections for format checking
@@ -438,17 +442,66 @@ class RobustReIDEmbeddingGenerator:
                 if len(det) >= 6:
                     print(f"  Row {i}: {det[:8].tolist()}")  # Show first 8 values
 
-                    # Basic validation
                     if self.detection_layout == "cls_conf_xyxy":
                         cls_id, conf, x1, y1, x2, y2 = det[:6]
-                        if not (0 <= cls_id < 100):  # Reasonable class range
-                            print(f"    ⚠️  Suspicious class_id: {cls_id}")
-                        if not (0 <= conf <= 1):  # Confidence should be [0,1]
-                            print(f"    ⚠️  Suspicious confidence: {conf}")
-                        if not (x1 < x2 and y1 < y2):  # Basic bbox validation
-                            print(f"    ⚠️  Invalid bbox: x1={x1}, y1={y1}, x2={x2}, y2={y2}")
+
+                        # Enhanced validation
+                        issues = []
+                        if not (0 <= cls_id < 100):
+                            issues.append(f"class_id={cls_id}")
+                        if not (0 <= conf <= 1):
+                            issues.append(f"conf={conf}")
+                        if not (x1 < x2 and y1 < y2):
+                            issues.append(f"invalid_bbox")
+                        if not (0 <= x1 <= self.input_size and 0 <= x2 <= self.input_size):
+                            issues.append(f"x_out_of_bounds")
+                        if not (0 <= y1 <= self.input_size and 0 <= y2 <= self.input_size):
+                            issues.append(f"y_out_of_bounds")
+
+                        if issues:
+                            print(f"    ⚠️  Issues: {', '.join(issues)}")
+                        else:
+                            print(f"    ✅ Valid detection")
 
             print("✅ Detection format validation completed")
+
+    def _validate_feature_map_quality(self, feature_map: np.ndarray) -> bool:
+        """Validate feature map quality before ROI extraction.
+
+        Args:
+            feature_map: Feature map tensor to validate
+
+        Returns:
+            True if feature map is valid, False otherwise
+        """
+        if feature_map is None:
+            print("❌ Feature map is None")
+            return False
+
+        if feature_map.ndim != 4:
+            print(f"❌ Feature map has wrong dimensions: {feature_map.ndim} (expected 4)")
+            return False
+
+        # Check for reasonable values
+        if np.all(feature_map == 0):
+            print("⚠️  Warning: Feature map is all zeros")
+            return False
+
+        if np.any(np.isnan(feature_map)) or np.any(np.isinf(feature_map)):
+            print("❌ Feature map contains NaN or Inf values")
+            return False
+
+        # Check activation statistics
+        std = feature_map.std()
+        mean = feature_map.mean()
+
+        if std < 1e-6:
+            print(f"⚠️  Warning: Very low feature map variance (std={std:.2e})")
+
+        if self.debug:
+            print(f"✅ Feature map stats: mean={mean:.4f}, std={std:.4f}, min={feature_map.min():.4f}, max={feature_map.max():.4f}")
+
+        return True
 
     def filter_detections(self, detections: List, conf_threshold: float = 0.5) -> List:
         """Filter detections by confidence threshold with enhanced validation.
@@ -596,27 +649,46 @@ class RobustReIDEmbeddingGenerator:
 
         roi_features = []
         invalid_roi_count = 0
-        min_roi_size = 2  # Enforce minimum RoI size
+        min_roi_size = 3  # Increased from 2 to 3 for better quality
 
         for i, (cls_id, conf, orig_bbox, scaled_bbox) in enumerate(scaled_detections):
             feat_x1, feat_y1, feat_x2, feat_y2 = scaled_bbox
 
-            # Convert to integer coordinates using round/ceil strategy
-            x1 = int(np.round(feat_x1))
-            y1 = int(np.round(feat_y1))
+            # More robust coordinate conversion
+            x1 = int(np.floor(feat_x1))
+            y1 = int(np.floor(feat_y1))
             x2 = int(np.ceil(feat_x2))
             y2 = int(np.ceil(feat_y2))
 
-            # Ensure valid region with minimum size
-            if x2 - x1 < min_roi_size or y2 - y1 < min_roi_size:
-                # Expand to minimum size if possible
-                center_x, center_y = (x1 + x2) // 2, (y1 + y2) // 2
-                half_size = min_roi_size // 2
+            # Ensure minimum size with better expansion logic
+            width = x2 - x1
+            height = y2 - y1
 
-                x1 = max(0, min(feat_w - min_roi_size, center_x - half_size))
-                y1 = max(0, min(feat_h - min_roi_size, center_y - half_size))
-                x2 = min(feat_w, x1 + min_roi_size)
-                y2 = min(feat_h, y1 + min_roi_size)
+            if width < min_roi_size or height < min_roi_size:
+                # Expand symmetrically around center
+                center_x = (x1 + x2) / 2
+                center_y = (y1 + y2) / 2
+
+                target_width = max(min_roi_size, width)
+                target_height = max(min_roi_size, height)
+
+                x1 = int(max(0, center_x - target_width / 2))
+                y1 = int(max(0, center_y - target_height / 2))
+                x2 = int(min(feat_w, x1 + target_width))
+                y2 = int(min(feat_h, y1 + target_height))
+
+                # Adjust if we hit boundaries
+                if x2 - x1 < min_roi_size:
+                    if x2 == feat_w:
+                        x1 = max(0, x2 - min_roi_size)
+                    else:
+                        x2 = min(feat_w, x1 + min_roi_size)
+
+                if y2 - y1 < min_roi_size:
+                    if y2 == feat_h:
+                        y1 = max(0, y2 - min_roi_size)
+                    else:
+                        y2 = min(feat_h, y1 + min_roi_size)
 
             # Final validation
             if x2 <= x1 or y2 <= y1 or x1 < 0 or y1 < 0 or x2 > feat_w or y2 > feat_h:
@@ -686,6 +758,73 @@ class RobustReIDEmbeddingGenerator:
                 print(f"  Embedding {i+1} ({class_name}): {roi.shape} -> {embedding.shape}")
                 print(f"    Range: [{embedding.min():.4f}, {embedding.max():.4f}]")
                 print(f"    Mean: {embedding.mean():.4f}, Std: {embedding.std():.4f}")
+
+        return embeddings
+
+    def apply_adaptive_pooling(self, roi_features: List, target_size: Tuple[int, int] = (2, 2)) -> List:
+        """Apply adaptive pooling to ROI features for consistent output size.
+
+        Args:
+            roi_features: List of (detection_info, roi_features) tuples
+            target_size: Target pooling size (height, width)
+
+        Returns:
+            List of (detection_info, embedding) tuples
+        """
+        if len(roi_features) == 0:
+            return []
+
+        if self.debug:
+            print(f"\n=== ADAPTIVE POOLING ===")
+            print(f"Target pooling size: {target_size}")
+
+        embeddings = []
+        target_h, target_w = target_size
+
+        for i, (detection_info, roi) in enumerate(roi_features):
+            channels, roi_h, roi_w = roi.shape
+
+            # If ROI is already small enough, use GAP
+            if roi_h <= target_h and roi_w <= target_w:
+                embedding = np.mean(roi, axis=(1, 2))  # GAP
+            else:
+                # Apply adaptive average pooling
+                pooled_features = []
+
+                for c in range(channels):
+                    channel_data = roi[c]
+
+                    # Calculate pooling windows
+                    h_step = roi_h / target_h
+                    w_step = roi_w / target_w
+
+                    pooled_channel = np.zeros((target_h, target_w))
+
+                    for th in range(target_h):
+                        for tw in range(target_w):
+                            h_start = int(th * h_step)
+                            h_end = int((th + 1) * h_step)
+                            w_start = int(tw * w_step)
+                            w_end = int((tw + 1) * w_step)
+
+                            pooled_channel[th, tw] = np.mean(channel_data[h_start:h_end, w_start:w_end])
+
+                    pooled_features.append(pooled_channel)
+
+                # Convert to embedding
+                pooled_roi = np.array(pooled_features)  # [channels, target_h, target_w]
+                embedding = pooled_roi.flatten()  # Flatten to 1D vector
+
+            # Validate embedding
+            if np.any(np.isnan(embedding)) or np.any(np.isinf(embedding)):
+                print(f"⚠️  Warning: Invalid embedding for detection {i+1}")
+                continue
+
+            embeddings.append((detection_info, embedding))
+
+            if self.debug:
+                class_name = COCO_CLASS_LOOKUP.get(detection_info['class_id'], f"class_{detection_info['class_id']}")
+                print(f"  Embedding {i+1} ({class_name}): {roi.shape} -> {embedding.shape}")
 
         return embeddings
 
@@ -927,8 +1066,8 @@ class RobustReIDEmbeddingGenerator:
                 print("⚠️  No valid RoI features extracted!")
                 return []
 
-            # Step 6: Apply Global Average Pooling
-            embeddings = self.apply_global_average_pooling(roi_features)
+            # Step 6: Apply Adaptive Pooling (instead of just GAP)
+            embeddings = self.apply_adaptive_pooling(roi_features, target_size=(2, 2))
 
             # Step 7: L2 normalize embeddings
             normalized_embeddings = self.l2_normalize_embeddings(embeddings)
