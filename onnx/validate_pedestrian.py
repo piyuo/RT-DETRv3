@@ -7,7 +7,75 @@ Focuses on metrics relevant for pedestrian counting applications.
 """
 
 import numpy as np
+import argparse
 from reid_embeddings import RobustReIDEmbeddingGenerator
+
+def filter_duplicate_detections(people_embeddings, similarity_threshold=0.9):
+    """Remove likely duplicate detections of same person."""
+    if len(people_embeddings) <= 1:
+        return people_embeddings
+
+    filtered = []
+    used_indices = set()
+
+    for i, (info_i, emb_i) in enumerate(people_embeddings):
+        if i in used_indices:
+            continue
+
+        current_group = [(info_i, emb_i)]
+
+        for j, (info_j, emb_j) in enumerate(people_embeddings[i+1:], i+1):
+            if j in used_indices:
+                continue
+
+            similarity = np.dot(emb_i, emb_j)
+            if similarity > similarity_threshold:
+                current_group.append((info_j, emb_j))
+                used_indices.add(j)
+
+        # Keep detection with highest confidence from group
+        best_detection = max(current_group, key=lambda x: x[0]['confidence'])
+        filtered.append(best_detection)
+        used_indices.add(i)
+
+    return filtered
+
+def production_pedestrian_counting(model_path: str, image_path: str, feature_map_name: str = None,
+                                 conf_threshold: float = 0.3, similarity_threshold: float = 0.95):
+    """Production-ready pedestrian counting with duplicate removal."""
+    print("🏭 Production Pedestrian Counting Pipeline...")
+
+    generator = RobustReIDEmbeddingGenerator(
+        model_path,
+        feature_map_name=feature_map_name,
+        debug=False  # Disable debug for production
+    )
+
+    # Generate embeddings
+    embeddings = generator.process_image(image_path, conf_threshold=conf_threshold,
+                                       output_dir="output/validation")
+
+    # Filter only people (class_id = 0)
+    people_embeddings = [
+        (info, emb) for info, emb in embeddings
+        if info['class_id'] == 0
+    ]
+
+    print(f"   Initial people detections: {len(people_embeddings)}")
+
+    # Remove duplicates
+    if len(people_embeddings) > 1:
+        unique_people = filter_duplicate_detections(people_embeddings, similarity_threshold=similarity_threshold)
+        removed_count = len(people_embeddings) - len(unique_people)
+
+        if removed_count > 0:
+            print(f"   Removed {removed_count} duplicate detections")
+
+        print(f"   Final pedestrian count: {len(unique_people)}")
+        return unique_people
+    else:
+        print(f"   Final pedestrian count: {len(people_embeddings)}")
+        return people_embeddings
 
 def validate_pedestrian_reid(model_path: str, image_path: str, feature_map_name: str = None):
     """Validate Re-ID pipeline specifically for pedestrian counting."""
@@ -20,7 +88,8 @@ def validate_pedestrian_reid(model_path: str, image_path: str, feature_map_name:
         debug=True
     )
 
-    embeddings = generator.process_image(image_path, conf_threshold=0.3)
+    embeddings = generator.process_image(image_path, conf_threshold=0.3,
+                                       output_dir="output/validation")
 
     # Filter only people (class_id = 0)
     people_embeddings = [
@@ -46,6 +115,7 @@ def validate_pedestrian_reid(model_path: str, image_path: str, feature_map_name:
     for i in range(len(people_embeddings)):
         for j in range(i + 1, len(people_embeddings)):
             sim = similarity_matrix[i, j]
+            person_similarities.append(sim)
             person_similarities.append(sim)
 
     if person_similarities:
@@ -74,12 +144,22 @@ def validate_pedestrian_reid(model_path: str, image_path: str, feature_map_name:
             print("✅ Reasonable: Moderate person-to-person similarity")
 
         # Check for very similar people (potential duplicates)
-        very_similar_pairs = [(i, j, sim) for idx, sim in enumerate(person_similarities)
-                             if sim > 0.9 for i, j in [(idx//len(people_embeddings), idx%len(people_embeddings))]]
+        very_similar_count = sum(1 for sim in person_similarities if sim > 0.9)
 
-        if very_similar_pairs:
-            print(f"⚠️  Found {len(very_similar_pairs)} very similar person pairs (sim > 0.9)")
+        if very_similar_count > 0:
+            print(f"⚠️  Found {very_similar_count} very similar person pairs (sim > 0.9)")
             print("    These might be the same person detected multiple times")
+
+            # Test duplicate filtering
+            print(f"\n🔄 Testing duplicate filtering...")
+            filtered_people = filter_duplicate_detections(people_embeddings, similarity_threshold=0.95)
+            print(f"   Before filtering: {len(people_embeddings)} people")
+            print(f"   After filtering (sim > 0.95): {len(filtered_people)} people")
+            print(f"   Removed duplicates: {len(people_embeddings) - len(filtered_people)}")
+
+            if len(filtered_people) < len(people_embeddings):
+                print("✅ Duplicate filtering successfully reduced count")
+                people_embeddings = filtered_people  # Use filtered for remaining analysis
 
     # Analyze ROI quality specifically for people
     people_roi_areas = [info['roi_shape'][1] * info['roi_shape'][2]
@@ -98,18 +178,22 @@ def validate_pedestrian_reid(model_path: str, image_path: str, feature_map_name:
 
     # Overall assessment for pedestrian counting
     print(f"\n🎯 Pedestrian Counting Assessment:")
-    if len(people_embeddings) >= 5:
+    final_count = len(people_embeddings)
+    if final_count >= 5:
         print("✅ Good detection count for analysis")
     else:
         print("⚠️  Low detection count - test with busier scenes")
 
     if mean_similarity < 0.7 and small_people_rois < len(people_embeddings) * 0.6:
         print("✅ Pipeline suitable for pedestrian counting")
+        print(f"💡 Final pedestrian count: {final_count}")
     else:
         print("⚠️  Pipeline may have challenges with pedestrian counting")
+        print(f"💡 Final pedestrian count: {final_count}")
 
     return {
-        'total_people': len(people_embeddings),
+        'total_people': final_count,
+        'original_detections': len([info for info, _ in embeddings if info['class_id'] == 0]),
         'person_similarity_stats': {
             'mean': mean_similarity,
             'std': std_similarity,
@@ -120,9 +204,52 @@ def validate_pedestrian_reid(model_path: str, image_path: str, feature_map_name:
     }
 
 if __name__ == "__main__":
-    # Test with your current setup
-    model_path = "onnx/backbone/rtdetrv3_r18vd_6x.onnx"
-    image_path = "onnx/demo/demo.jpg"
-    feature_map_name = "Concat.5"  # C3 level
+    parser = argparse.ArgumentParser(description="Pedestrian counting with Re-ID validation")
+    parser.add_argument("--model", default="onnx/backbone/rtdetrv3_r18vd_6x.onnx",
+                       help="Path to ONNX model")
+    parser.add_argument("--image", default="onnx/demo/demo.jpg",
+                       help="Path to test image")
+    parser.add_argument("--feature-map", default="Concat.5",
+                       help="Feature map name (C3=Concat.5, C4=Concat.3)")
+    parser.add_argument("--conf-threshold", type=float, default=0.3,
+                       help="Confidence threshold for detections")
+    parser.add_argument("--similarity-threshold", type=float, default=0.95,
+                       help="Similarity threshold for duplicate removal")
+    parser.add_argument("--mode", choices=["validate", "production", "both"], default="both",
+                       help="Run validation, production counting, or both")
 
-    validate_pedestrian_reid(model_path, image_path, feature_map_name)
+    args = parser.parse_args()
+
+    print("🚶 Pedestrian Re-ID Analysis")
+    print("=" * 50)
+    print(f"Model: {args.model}")
+    print(f"Image: {args.image}")
+    print(f"Feature map: {args.feature_map}")
+    print(f"Confidence threshold: {args.conf_threshold}")
+    print(f"Similarity threshold: {args.similarity_threshold}")
+    print("")
+
+    if args.mode in ["validate", "both"]:
+        print("🔍 Running Validation...")
+        results = validate_pedestrian_reid(args.model, args.image, args.feature_map)
+        print("")
+
+    if args.mode in ["production", "both"]:
+        print("🏭 Running Production Counting...")
+        unique_people = production_pedestrian_counting(
+            args.model, args.image, args.feature_map,
+            args.conf_threshold, args.similarity_threshold
+        )
+
+        print(f"\n✅ Production Result: {len(unique_people)} unique pedestrians detected")
+
+        # Show confidence distribution
+        if unique_people:
+            confidences = [info['confidence'] for info, _ in unique_people]
+            print(f"   Confidence range: {min(confidences):.3f} - {max(confidences):.3f}")
+            print(f"   Mean confidence: {sum(confidences)/len(confidences):.3f}")
+
+        print("🎯 Ready for deployment!")
+
+    print("\n" + "=" * 50)
+    print("Analysis complete! 🎉")
