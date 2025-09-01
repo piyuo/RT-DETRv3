@@ -373,7 +373,7 @@ class ReIDPipelineValidator:
             # Run pipeline multiple times to check consistency
             embeddings_runs = []
             for run in range(2):  # Run twice to check consistency
-                embeddings = generator.process_image(image_path, conf_threshold=0.3, output_dir=f"temp_validation_run_{run}")
+                embeddings = generator.process_image(image_path, conf_threshold=0.3, output_dir=f"onnx/validation/run_{run}")
                 if embeddings:
                     embeddings_runs.append(embeddings)
 
