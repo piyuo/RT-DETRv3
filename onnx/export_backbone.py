@@ -15,7 +15,9 @@ Key improvements:
 - Adds metadata to track the export process
 
 Usage:
-    python onnx/export_backbone.py --input onnx/input/rtdetrv3_r18vd_6x.onnx --output onnx/backbone/rtdetrv3_r18vd_6x.onnx
+    python onnx/export_backbone.py --input onnx/input/rtdetrv3_r18vd_6x.onnx --output onnx/backbone/rtdetrv3_r18vd_6x.onnx --level C4
+    python onnx/export_backbone.py --input onnx/input/rtdetrv3_r18vd_6x.onnx --list-only --level C3  # List C3 candidates
+    python onnx/export_backbone.py --input onnx/input/rtdetrv3_r18vd_6x.onnx --level C5 --output onnx/backbone/rtdetrv3_r18vd_6x_c5.onnx
 """
 
 import onnx
@@ -24,12 +26,13 @@ import argparse
 import sys
 from typing import List, Tuple, Dict
 
-def analyze_model_outputs(model: onnx.ModelProto, input_size: int = 640) -> List[Dict]:
+def analyze_model_outputs(model: onnx.ModelProto, input_size: int = 640, preferred_level: str = 'C4') -> List[Dict]:
     """Analyze all model outputs to identify potential backbone feature maps.
 
     Args:
         model: ONNX model to analyze
         input_size: Expected input image size
+        preferred_level: Preferred backbone level ('C3', 'C4', 'C5')
 
     Returns:
         List of candidate feature map information
@@ -81,10 +84,20 @@ def analyze_model_outputs(model: onnx.ModelProto, input_size: int = 640) -> List
 
             candidates.append(candidate_info)
 
-    # Sort candidates by likelihood (stride preference: 16 > 32 > 8, then by channels)
-    # C4 features (stride 16) are preferred for ReID embeddings due to better spatial resolution
+    # Sort candidates by likelihood (stride preference based on preferred level)
+    # Map levels to their corresponding strides
+    level_to_stride = {'C3': 8, 'C4': 16, 'C5': 32}
+    preferred_stride = level_to_stride.get(preferred_level, 16)
+
     def candidate_score(candidate):
-        stride_score = {16: 1000, 32: 900, 8: 800}.get(candidate['stride'], 0)
+        # Prioritize the preferred stride, then other common strides, then by channels
+        if candidate['stride'] == preferred_stride:
+            stride_score = 2000  # Highest priority for preferred level
+        elif candidate['stride'] in [8, 16, 32]:
+            stride_score = 1000  # Medium priority for other backbone levels
+        else:
+            stride_score = 0     # Low priority for uncommon strides
+
         channel_score = candidate['channels']
         return stride_score + channel_score
 
@@ -106,12 +119,13 @@ def analyze_model_outputs(model: onnx.ModelProto, input_size: int = 640) -> List
 
     return candidates
 
-def validate_feature_map_selection(candidate: Dict, input_size: int = 640) -> Tuple[bool, List[str]]:
+def validate_feature_map_selection(candidate: Dict, input_size: int = 640, preferred_level: str = 'C4') -> Tuple[bool, List[str]]:
     """Validate that a selected feature map is appropriate for Re-ID embeddings.
 
     Args:
         candidate: Candidate feature map information
         input_size: Expected input image size
+        preferred_level: Preferred backbone level ('C3', 'C4', 'C5')
 
     Returns:
         Tuple of (is_valid, list_of_warnings)
@@ -144,18 +158,32 @@ def validate_feature_map_selection(candidate: Dict, input_size: int = 640) -> Tu
     if 'detect' in candidate['name'].lower() or 'pred' in candidate['name'].lower():
         warnings.append(f"Name '{candidate['name']}' suggests detection output, not backbone feature")
 
-    # Prefer C4 features (stride 16) for Re-ID
-    if candidate['stride'] == 16:
-        pass  # Ideal for Re-ID - good balance of spatial resolution and semantic content
-    elif candidate['stride'] == 32:
-        warnings.append("Using C5 features (stride 32) - good semantic content but C4 (stride 16) typically preferred for Re-ID")
-    elif candidate['stride'] == 8:
-        warnings.append("Using C3 features (stride 8) - may be too high resolution for efficient Re-ID")
+    # Check against preferred level
+    level_to_stride = {'C3': 8, 'C4': 16, 'C5': 32}
+    preferred_stride = level_to_stride.get(preferred_level, 16)
+
+    if candidate['stride'] == preferred_stride:
+        pass  # Perfect match for requested level
+    elif candidate['stride'] in [8, 16, 32]:
+        level_names = {8: 'C3', 16: 'C4', 32: 'C5'}
+        actual_level = level_names.get(candidate['stride'], f'stride-{candidate["stride"]}')
+        warnings.append(f"Using {actual_level} features (stride {candidate['stride']}) instead of requested {preferred_level} (stride {preferred_stride})")
+
+        # Provide specific guidance based on stride
+        if candidate['stride'] == 32:  # C5
+            warnings.append("C5 features: Good semantic content, but may struggle with small objects")
+        elif candidate['stride'] == 8:   # C3
+            warnings.append("C3 features: High resolution, good for small objects, but may be computationally expensive")
+        elif candidate['stride'] == 16:  # C4
+            warnings.append("C4 features: Good balance of spatial resolution and semantic content")
+    else:
+        warnings.append(f"Unusual stride {candidate['stride']} - may not be a standard backbone feature level")
 
     return is_valid, warnings
 
 def export_backbone_features(input_path: str, output_path: str,
                            feature_map_name: str = None,
+                           preferred_level: str = 'C4',
                            input_size: int = 640,
                            validate_export: bool = True) -> bool:
     """Export ONNX model with backbone feature map as additional output.
@@ -164,6 +192,7 @@ def export_backbone_features(input_path: str, output_path: str,
         input_path: Path to input ONNX model
         output_path: Path to save modified model
         feature_map_name: Explicit feature map name (if None, auto-detect)
+        preferred_level: Preferred backbone level ('C3', 'C4', 'C5')
         input_size: Expected input image size
         validate_export: Whether to validate the export
 
@@ -182,7 +211,7 @@ def export_backbone_features(input_path: str, output_path: str,
     graph = model.graph
 
     # Analyze candidates
-    candidates = analyze_model_outputs(model, input_size)
+    candidates = analyze_model_outputs(model, input_size, preferred_level)
 
     if not candidates:
         print("❌ No potential backbone feature map candidates found!")
@@ -215,7 +244,7 @@ def export_backbone_features(input_path: str, output_path: str,
         print(f"🎯 Auto-selected feature map: {selected_candidate['name']}")
 
     # Validate selection
-    is_valid, warnings = validate_feature_map_selection(selected_candidate, input_size)
+    is_valid, warnings = validate_feature_map_selection(selected_candidate, input_size, preferred_level)
 
     print(f"🔍 Validating selected feature map: {selected_candidate['name']}")
     print(f"   Shape: {selected_candidate['shape']}")
@@ -293,7 +322,7 @@ def export_backbone_features(input_path: str, output_path: str,
     print(f"   Output model: {output_path}")
     print(f"   Exported feature: {selected_candidate['name']}")
     print(f"   Feature shape: {selected_candidate['shape']}")
-    print(f"   Recommended for Re-ID: {'Yes' if selected_candidate['stride'] == 16 else 'Consider C4 layer if available'}")
+    print(f"   Recommended for Re-ID: {'Yes' if selected_candidate['stride'] == 16 else 'Consider C4 layer that balances performance and quality. but Start with C3 will provide better resolution for small pedestrians '}")
 
     return True
 
@@ -308,6 +337,8 @@ def main():
                        help="Path to save modified model")
     parser.add_argument("--feature-map-name", default=None,
                        help="Explicit feature map name to export (if not provided, auto-detect)")
+    parser.add_argument("--level", choices=['C3', 'C4', 'C5'], default='C4',
+                       help="Backbone feature level to export: C3 (stride 8), C4 (stride 16), C5 (stride 32)")
     parser.add_argument("--input-size", type=int, default=640,
                        help="Expected input image size for stride calculation")
     parser.add_argument("--no-validate", action="store_true",
@@ -326,9 +357,11 @@ def main():
         if args.list_only:
             # Just analyze and list candidates
             print(f"🔍 Analyzing model outputs: {args.input}")
+            level_to_stride = {'C3': 8, 'C4': 16, 'C5': 32}
+            print(f"   Preferred level: {args.level} (stride {level_to_stride[args.level]})")
             model = onnx.load(args.input)
             model = shape_inference.infer_shapes(model)
-            candidates = analyze_model_outputs(model, args.input_size)
+            candidates = analyze_model_outputs(model, args.input_size, args.level)
 
             if candidates:
                 print(f"📋 Use --feature-map-name with one of these candidates:")
@@ -340,10 +373,13 @@ def main():
                 return 1
         else:
             # Perform export
+            level_to_stride = {'C3': 8, 'C4': 16, 'C5': 32}
+            print(f"🎯 Target level: {args.level} (stride {level_to_stride[args.level]})")
             success = export_backbone_features(
                 input_path=args.input,
                 output_path=args.output,
                 feature_map_name=args.feature_map_name,
+                preferred_level=args.level,
                 input_size=args.input_size,
                 validate_export=not args.no_validate
             )
