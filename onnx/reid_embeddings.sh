@@ -12,7 +12,7 @@
 # 1. Robust image preprocessing with letterbox support
 # 2. Object detection with confidence filtering
 # 3. Backbone feature extraction for detected objects
-# 4. L2-normalized embedding generation (512-dimensional)
+# 4. L2-normalized embedding generation (2048-dimensional: 512 channels x 2x2 adaptive pooling)
 # 5. Quality validation and metrics
 # 6. Comprehensive debugging output
 # 7. Visualization and analysis tools

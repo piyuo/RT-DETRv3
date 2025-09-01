@@ -963,12 +963,16 @@ class RobustReIDEmbeddingGenerator:
 
             # Calculate separability
             if same_class_sims and diff_class_sims:
-                separability = np.mean(diff_class_sims) - np.mean(same_class_sims)
-                separability_ratio = np.mean(diff_class_sims) / np.mean(same_class_sims) if np.mean(same_class_sims) > 0 else float('inf')
-                print(f"Separability: {separability:.3f}, ratio: {separability_ratio:.2f}")
+                # Use a more intuitive definition: higher intra-class similarity vs inter-class
+                mean_same = float(np.mean(same_class_sims))
+                mean_diff = float(np.mean(diff_class_sims))
+                separability_margin = mean_same - mean_diff  # positive is good
+                separability_ratio = (mean_same / mean_diff) if mean_diff > 1e-8 else float('inf')
+                print(f"Separability margin (same - diff): {separability_margin:.3f}, ratio (same/diff): {separability_ratio:.2f}")
 
-                if separability_ratio < 1.2:
-                    print("⚠️  Warning: Poor class separability (ratio < 1.2)")
+                # Heuristic thresholds
+                if separability_ratio < 1.5 or separability_margin < 0.2:
+                    print("⚠️  Warning: Suboptimal class separability (need ratio >= 1.5 and margin >= 0.2)")
 
             print("Similarity matrix:")
             for i in range(len(embeddings)):

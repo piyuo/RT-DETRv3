@@ -183,7 +183,7 @@ The Re-ID embedding pipeline consists of several interconnected components:
 1. **Backbone Feature Extraction**: Identifies and extracts optimal feature maps (C3/C4/C5) from RT-DETRv3
 2. **Detection Processing**: Handles object detection outputs with robust format validation
 3. **ROI Feature Extraction**: Extracts region-of-interest features using bilinear interpolation
-4. **Embedding Generation**: Produces L2-normalized 512-dimensional embeddings
+4. **Embedding Generation**: Produces L2-normalized 2048-dimensional embeddings (512 channels after backbone feature map selection with 2×2 adaptive pooling → 512 * 4)
 5. **Quality Validation**: Ensures embedding quality through separability analysis
 
 ### Debug Information
@@ -206,7 +206,7 @@ The pipeline includes comprehensive quality assessment with the following benchm
 - **Embedding Normalization**: All embeddings should have L2 norm = 1.0 (±0.001 tolerance)
 - **Intra-class Similarity**: Objects of same class should have cosine similarity > 0.7
 - **Inter-class Distinction**: Different classes should have cosine similarity < 0.5
-- **Separability Ratio**: Inter-class distance / Intra-class distance should be > 1.5
+- **Separability Ratio**: (Mean same-class similarity) / (Mean different-class similarity) should be > 1.5 (higher is better). Current implementation also reports an alternate form (diff/same) internally for debugging; values < 1 indicate poor separation in that alternate view.
 - **Consistency Check**: Identical images should produce embeddings with similarity > 0.99
 - **Stability Test**: Similar viewpoints should maintain similarity > 0.8
 
