@@ -228,7 +228,7 @@ def main():
                        help="Path to Re-ID results JSON file")
     parser.add_argument("--distance-threshold", type=float, default=0.3,
                        help="Distance threshold for matching")
-    parser.add_argument("--output", default="onnx/output/validation",
+    parser.add_argument("--output", default="onnx/validation",
                        help="Output validation directory for analysis results")
 
     args = parser.parse_args()
@@ -241,7 +241,17 @@ def main():
         print("Please run reid_embeddings.py first to generate the results.")
         return
 
-    detections = results['detections']
+    # Access detections from the nested structure
+    if 'results' in results and 'detections' in results['results']:
+        detections = results['results']['detections']
+    elif 'detections' in results:
+        detections = results['detections']
+    else:
+        print("❌ Error: No 'detections' found in results file.")
+        print("Available keys:", list(results.keys()))
+        if 'results' in results:
+            print("Keys in 'results':", list(results['results'].keys()))
+        return
     print(f"✅ Loaded {len(detections)} detections with Re-ID embeddings")
 
     # Analyze embedding quality
