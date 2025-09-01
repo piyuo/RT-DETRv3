@@ -32,8 +32,8 @@
       "user_script": "onnx/quantize.py",
       "load_dataset_config": {
         "type": "dataset_load",
-        "data_dir": "dataset/coco/val2017",
-        "annotation_file": "dataset/coco/annotations/simple_val2017.json"
+        "data_dir": "onnx/calibration/img",
+        "annotation_file": "onnx/calibration/val2017.json"
       },
       "post_process_data_config": { "type": "dataset_post_process" }
     }
