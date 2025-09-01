@@ -15,7 +15,7 @@ Validation checks:
 6. Embedding quality assessment
 
 Usage:
-    python tools/validate_reid_pipeline.py --model output/rtdetrv3_r18vd_6x_backbone.onnx --image demo/demo.jpg
+    python tools/validate_reid_pipeline.py --model output/rtdetrv3_r18vd_6x_backbone.onnx --image demo/demo.jpg --feature-map-name Concat.5
 """
 
 import argparse
@@ -179,7 +179,7 @@ class ReIDPipelineValidator:
         return check_result
 
     def validate_coordinate_consistency(self, generator: RobustReIDEmbeddingGenerator,
-                                      image_path: str) -> Dict[str, Any]:
+                                      image_path: str, feature_map_name: str = None) -> Dict[str, Any]:
         """Validate coordinate space transformations and consistency."""
         print("🔍 Validating coordinate consistency...")
 
@@ -195,13 +195,13 @@ class ReIDPipelineValidator:
 
             # Test simple resize
             gen_simple = RobustReIDEmbeddingGenerator(
-                self.model_path, use_letterbox=False, debug=False
+                self.model_path, use_letterbox=False, debug=False, feature_map_name=feature_map_name
             )
             generators['simple_resize'] = gen_simple
 
             # Test letterbox
             gen_letterbox = RobustReIDEmbeddingGenerator(
-                self.model_path, use_letterbox=True, debug=False
+                self.model_path, use_letterbox=True, debug=False, feature_map_name=feature_map_name
             )
             generators['letterbox'] = gen_letterbox
 
@@ -478,21 +478,23 @@ class ReIDPipelineValidator:
 
         return check_result
 
-    def run_comprehensive_validation(self, image_path: str) -> Dict[str, Any]:
+    def run_comprehensive_validation(self, image_path: str, feature_map_name: str = None) -> Dict[str, Any]:
         """Run all validation checks and generate comprehensive report."""
         print("🔄 Starting comprehensive Re-ID pipeline validation...")
         print(f"   Model: {self.model_path}")
         print(f"   Test image: {image_path}")
+        if feature_map_name:
+            print(f"   Feature map: {feature_map_name}")
 
         # Initialize generator for testing
-        generator = RobustReIDEmbeddingGenerator(self.model_path, debug=False)
+        generator = RobustReIDEmbeddingGenerator(self.model_path, debug=False, feature_map_name=feature_map_name)
 
         # Run all validation checks
         checks = {}
 
         checks['model_structure'] = self.validate_model_structure()
         checks['detection_format'] = self.validate_detection_format(generator, image_path)
-        checks['coordinate_consistency'] = self.validate_coordinate_consistency(generator, image_path)
+        checks['coordinate_consistency'] = self.validate_coordinate_consistency(generator, image_path, feature_map_name)
         checks['roi_extraction'] = self.validate_roi_extraction(generator, image_path)
         checks['embedding_quality'] = self.validate_embedding_quality(generator, image_path)
 
@@ -644,6 +646,8 @@ def main():
                        help="Path to test image")
     parser.add_argument("--output", default="output/reid_validation_report.json",
                        help="Path to save validation report")
+    parser.add_argument("--feature-map-name",
+                       help="Explicitly specify backbone feature map name (e.g., Concat.5 for C3, Concat.3 for C4)")
     parser.add_argument("--debug", action="store_true",
                        help="Enable debug output")
 
@@ -661,7 +665,7 @@ def main():
     try:
         # Run validation
         validator = ReIDPipelineValidator(args.model, debug=args.debug)
-        results = validator.run_comprehensive_validation(args.image)
+        results = validator.run_comprehensive_validation(args.image, args.feature_map_name)
 
         # Save report
         validator.save_report(args.output)
