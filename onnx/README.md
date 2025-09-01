@@ -34,128 +34,51 @@ onnx/validate_reid_pipeline.sh
 onnx/reid_embeddings.sh
 ```
 
-### 5. Validate pedestrian reid embedding
+### 4. Validate pedestrian reid embedding
 
 ```bash
-validate_pedestrian.sh
+onnx/validate_pedestrian.sh
 ```
 
 ### 5. Test BoT-SORT Integration
 
 ```bash
-python tools/botsort_integration_test.py --results onnx/validation/demo_reid_results.json
+onnx/botsort_integration_test.sh
 ```
 
-### Enhanced Pipeline Features
-
-The robust implementation (`reid_embeddings.py`) addresses critical concerns:
-
-#### 1. **Feature Map Selection Validation**
-
-- **Explicit naming**: Use `--feature-map-name` to avoid confusion with detection outputs
-- **Stride verification**: Ensures feature maps have expected strides (8, 16, 32)
-- **Multi-candidate analysis**: Evaluates all potential backbone features and ranks them
-- **Validation warnings**: Alerts about unusual feature map characteristics
-
-#### 2. **Detection Format Verification**
-
-- **Layout specification**: Support for different detection formats (`cls_conf_xyxy`, `xywh_score_cls`)
-- **Raw detection validation**: Prints first 5 detection rows for manual verification
-- **Range checking**: Validates class IDs, confidence scores, and bbox coordinates
-- **Format assertion**: Ensures detection tensor has expected column count
-
-#### 3. **Coordinate Space Consistency**
-
-- **Letterbox support**: Maintains aspect ratio during preprocessing (use `--use-letterbox`)
-- **Coordinate validation**: Checks bbox validity before and after scaling
-- **Scaling verification**: Validates coordinate transformations at each step
-- **Multiple preprocessing modes**: Compare simple resize vs letterbox preprocessing
-
-#### 4. **Robust Input Feeding**
-
-- **Explicit matching**: Maps inputs by name patterns (`image`, `shape`, `scale`)
-- **Validation checks**: Ensures all required inputs are provided
-- **Fallback handling**: Graceful handling of ambiguous input configurations
-- **Error reporting**: Clear messages for input mapping failures
-
-#### 5. **Enhanced RoI Extraction**
-
-- **Improved clamping**: Uses round/ceil strategy for integer coordinate conversion
-- **Minimum size enforcement**: Ensures RoIs are at least 2×2 pixels
-- **Invalid region filtering**: Automatically discards malformed regions
-- **Quality statistics**: Reports percentage of discarded regions
-
-#### 6. **Embedding Quality Assurance**
-
-- **NaN/Inf detection**: Validates embeddings for numerical stability
-- **Norm verification**: Ensures L2 normalization produces unit vectors
-- **Separability analysis**: Measures intra-class vs inter-class distances
-- **Consistency checking**: Validates reproducibility across runs
-
-### Production Deployment Checklist
-
-Before deploying to production, run the validation script:
-
-```bash
-onnx/validate_reid_pipeline.sh
-```
-
-The validator checks:
-
-- ✅ **Model Structure**: Feature map candidates and backbone identification
-- ✅ **Detection Format**: Tensor layout and coordinate validation
-- ✅ **Coordinate Consistency**: Preprocessing and scaling verification
-- ✅ **RoI Quality**: Extraction success rate and region validity
-- ✅ **Embedding Quality**: Normalization, separability, and consistency
 
 ### Common Issues and Solutions
 
-#### Issue: "High percentage of invalid RoI regions"
-
-**Solution**: Use letterbox preprocessing or different feature map resolution
-
-```bash
-# Try letterbox preprocessing
-python tools/reid_embeddings_robust.py \
-    --model model.onnx --image image.jpg --use-letterbox
-
-# Or use higher resolution features (C4 instead of C5)
-python tools/onnx_export_backbone_features_robust.py \
-    --feature-map-name "c4_feature_name"
-```
-
 #### Issue: "Poor class separability detected"
 
-**Solution**: Consider multi-scale features or model fine-tuning
-
-```bash
-# Analyze separability in detail
-onnx/validate_reid_pipeline.sh
-```
+**Solution**: Consider multi-scale features or model fine-tuning, right now we already use C3 feature map, it can not get bigger, maybe bigger input image size will help, but current 640 is already slow for us, so we stuck on image size 640.
 
 ## File Structure (Updated)
 
 ```text
 onnx/
-├── reid_embeddings.py                           # Re-ID generator
-├── reid_embeddings.sh                           # Script to run Re-ID generator
+├── botsort_integration_test.py                  # BoT-SORT Integration Test for RT-DETRv3 Re-ID Embeddings
+├── botsort_integration_test.sh                  # Script to BoT-SORT Integration Test
 ├── export_backbone.py                           # Backbone feature exporter
 ├── export_backbone.sh                           # Script to run Backbone feature exporter
+├── README.md                                    # Describe how to use these script files.
+├── reid_embeddings.py                           # Re-ID generator
+├── reid_embeddings.sh                           # Script to run Re-ID generator
 ├── validate_reid_pipeline.py                    # Comprehensive pipeline validator
 ├── validate_reid_pipeline.sh                    # Script to run Comprehensive pipeline validator
-├── botsort_integration_test.py                  # BoT-SORT integration testing
 ├── reid_usage_example.py                        # Usage examples
 └── onnx_inference.py                            # Basic ONNX inference verification
+├── input/
+    ├── rtdetrv3_r18vd_6x.onnx                   # The RAW RT-DETRv3 model, convert from weight no optimization.
+├── backbone/
+    ├── rtdetrv3_r18vd_6x.onnx                   # The RT-DETRv3 model with feature backbone output.
+├── output/
+    ├── rtdetrv3_r18vd_6x.onnx                   # Final RT-DETRv3 model, Add feature backbone and optimization.
+├── env/                                         # Python virtual env.
+├── demo/
+    ├── demo.jpg                                 # The demo image for validation and run inference.
+├── validation/                                  # The validation files.
 
-output/
-├── rtdetrv3_r18vd_6x_backbone.onnx             # Model with backbone features
-├── reid_validation_report.json                  # 🆕 Validation results
-└── validation/
-    ├── demo_reid_results.json           # 🆕 Robust Re-ID results
-    ├── demo_reid_detections.jpg         # 🆕 Robust annotated image
-    ├── demo_reid_embeddings.png                # Embedding visualization
-    ├── botsort_analysis.json                   # BoT-SORT analysis
-    └── botsort_relationships.png               # Relationship visualization
 ```
 
 ## Pipeline Architecture (Enhanced)
