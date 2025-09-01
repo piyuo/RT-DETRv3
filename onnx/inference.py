@@ -235,9 +235,9 @@ def parse_args():
         description="Verify ONNX (quantized) model with debug.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    ap.add_argument("--model", default="output/rtdetrv3_r18vd_6x_backbone.onnx")
-    ap.add_argument("--image", default="demo/demo.jpg")
-    ap.add_argument("--out", default="output/demo.jpg")
+    ap.add_argument("--model", default="onnx/output/rtdetrv3_r18vd_6x.onnx")
+    ap.add_argument("--image", default="onnx/demo/demo.jpg")
+    ap.add_argument("--out", default="onnx/validation/demo_inference.jpg")
     ap.add_argument("--conf", type=float, default=0.5)
     ap.add_argument("--debug", action="store_true")
     ap.add_argument("--dump-json", default="")

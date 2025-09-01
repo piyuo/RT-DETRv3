@@ -3,7 +3,7 @@ import sys
 sys.path.append('tools')
 
 import onnxruntime as ort
-from rtdetr import CocoDetection, dataset_post_process
+from onnx.rtdetr import CocoDetection, dataset_post_process
 import numpy as np
 
 def test_dataset_with_model():
